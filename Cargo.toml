@@ -1,0 +1,9 @@
+[package]
+name = "wuwa-dango-2026"
+version = "0.1.0"
+edition = "2024"
+default-run = "wuwa-dango-2026"
+
+[dependencies]
+ambassador = "0.5.1"
+rand = "0.10.1"

@@ -1,0 +1,42 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug executable 'wuwa-dango-2026'",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["run", "--bin=wuwa-dango-2026"]
+      },
+      "args": []
+    },
+    {
+      "name": "Debug unit tests in executable 'wuwa-dango-2026'",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["test", "--bin=wuwa-dango-2026"]
+      }
+    },
+    {
+      "name": "Debug executable 'mytest'",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["run", "--bin=mytest"]
+      },
+      "args": []
+    },
+    {
+      "name": "Debug unit tests in executable 'mytest'",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["test", "--bin=mytest"]
+      }
+    }
+  ]
+}
