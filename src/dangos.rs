@@ -13,7 +13,37 @@ use crate::{
 
 static COMMON_DICE: [usize; 6] = [1, 1, 2, 2, 3, 3];
 
-// #[delegatable_trait]
+macro_rules! impl_run_attrs {
+    () => {
+        fn get_extra(&self) -> isize {
+            self.extra
+        }
+
+        fn set_extra(&mut self, extra: isize) {
+            self.extra = extra
+        }
+
+        fn get_pos(&self) -> (usize, usize) {
+            self.pos
+        }
+
+        fn set_pos(&mut self, pos: (usize, usize)) {
+            self.pos = pos
+        }
+    };
+}
+
+macro_rules! impl_run_pos {
+    () => {
+        fn get_pos(&self) -> (usize, usize) {
+            self.pos
+        }
+
+        fn set_pos(&mut self, pos: (usize, usize)) {
+            self.pos = pos
+        }
+    };
+}
 
 #[delegatable_trait]
 pub trait Run {
@@ -40,7 +70,11 @@ pub trait Run {
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
-        R: Rng + ?Sized;
+        R: Rng + ?Sized,
+    {
+        let n = self.roll(rng);
+        self.make_step(n, track, map, rng)
+    }
 
     fn make_step<R>(&mut self, n: usize, track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
@@ -79,24 +113,26 @@ pub trait Run {
                 target_x = new_x
             }
             PointType::Hole => {
-                // 打标记以便 shuffle 后找到 self 的新位置
-                self.set_pos((usize::MAX, usize::MAX));
-                if matches!(*track[target_x][0].borrow(), Dango::BuDaWang(_)) {
-                    let (_, right) = track[target_x].split_at_mut(1);
-                    right.shuffle(rng);
-                } else {
-                    track[target_x].shuffle(rng);
+                if track[target_x].len() > 1 {
+                    if is_budawang(&track[target_x][0]) {
+                        let (_, right) = track[target_x].split_at_mut(1);
+                        right.shuffle(rng);
+                    } else {
+                        track[target_x].shuffle(rng);
+                    }
+                    target_y = track[target_x]
+                        .iter()
+                        // 当前 self 已经发生了 borrow_mut，那么 try_borrow 一定会报错，而其他 dango 处不会报错
+                        .position(|d| d.try_borrow().is_err())
+                        .expect("The dango always can be found after shuffled by the hole.");
                 }
-                target_y = track[target_x]
-                    .iter()
-                    .position(|d| d.borrow().get_pos().0 == usize::MAX)
-                    .expect("The dango always can be found after shuffled by the hole.");
             }
         }
 
         self.set_extra(0);
-
         self.set_pos((target_x, target_y));
+
+        // 更新被 self 携带的团子的 pos，由于可能经过 hole 重置了顺序，所以更新所有在 target_x 处的团子的 pos
         track[target_x]
             .iter()
             .enumerate()
@@ -136,27 +172,14 @@ impl Denia {
 }
 
 impl Run for Denia {
-    fn get_extra(&self) -> isize {
-        self.extra
-    }
-
-    fn set_extra(&mut self, extra: isize) {
-        self.extra = extra
-    }
-
-    fn get_pos(&self) -> (usize, usize) {
-        self.pos
-    }
-
-    fn set_pos(&mut self, pos: (usize, usize)) {
-        self.pos = pos;
-    }
+    impl_run_attrs!();
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
         let n = self.roll(rng);
+
         if n == self.last_dice {
             self.extra += 2;
         }
@@ -184,29 +207,7 @@ impl Sigrika {
 }
 
 impl Run for Sigrika {
-    fn get_extra(&self) -> isize {
-        self.extra
-    }
-
-    fn set_extra(&mut self, extra: isize) {
-        self.extra = extra
-    }
-
-    fn get_pos(&self) -> (usize, usize) {
-        self.pos
-    }
-
-    fn set_pos(&mut self, pos: (usize, usize)) {
-        self.pos = pos
-    }
-
-    fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
-    where
-        R: Rng + ?Sized,
-    {
-        let n = self.roll(rng);
-        self.make_step(n, track, map, rng)
-    }
+    impl_run_attrs!();
 
     fn before_run(&mut self, track: &mut Track) {
         let (x, y) = self.get_pos();
@@ -251,21 +252,7 @@ impl Hiyuki {
 }
 
 impl Run for Hiyuki {
-    fn get_extra(&self) -> isize {
-        self.extra
-    }
-
-    fn set_extra(&mut self, extra: isize) {
-        self.extra = extra
-    }
-
-    fn get_pos(&self) -> (usize, usize) {
-        self.pos
-    }
-
-    fn set_pos(&mut self, pos: (usize, usize)) {
-        self.pos = pos
-    }
+    impl_run_attrs!();
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
@@ -275,7 +262,7 @@ impl Run for Hiyuki {
 
         let (old_x, _) = self.get_pos();
 
-        // 当前回合绯雪比布大王后动，且被布大王经过
+        // 绯雪上轮行动后至此轮行动前，被布大王经过
         if !self.meeted && is_budawang(&track[old_x][0]) {
             self.meeted = true;
         }
@@ -319,27 +306,14 @@ impl Cartethyia {
 }
 
 impl Run for Cartethyia {
-    fn get_extra(&self) -> isize {
-        self.extra
-    }
-
-    fn set_extra(&mut self, extra: isize) {
-        self.extra = extra
-    }
-
-    fn get_pos(&self) -> (usize, usize) {
-        self.pos
-    }
-
-    fn set_pos(&mut self, pos: (usize, usize)) {
-        self.pos = pos
-    }
+    impl_run_attrs!();
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
         let n = self.roll(rng);
+
         if self.has_been_last && rng.random_bool(Cartethyia::EXTRA_ADVANCE_PROB) {
             self.extra += 2;
         }
@@ -380,21 +354,7 @@ impl Phoebe {
 }
 
 impl Run for Phoebe {
-    fn get_extra(&self) -> isize {
-        self.extra
-    }
-
-    fn set_extra(&mut self, extra: isize) {
-        self.extra = extra
-    }
-
-    fn get_pos(&self) -> (usize, usize) {
-        self.pos
-    }
-
-    fn set_pos(&mut self, pos: (usize, usize)) {
-        self.pos = pos
-    }
+    impl_run_attrs!();
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
@@ -428,21 +388,7 @@ impl LuukHerssen {
 }
 
 impl Run for LuukHerssen {
-    fn get_extra(&self) -> isize {
-        self.extra
-    }
-
-    fn set_extra(&mut self, extra: isize) {
-        self.extra = extra
-    }
-
-    fn get_pos(&self) -> (usize, usize) {
-        self.pos
-    }
-
-    fn set_pos(&mut self, pos: (usize, usize)) {
-        self.pos = pos
-    }
+    impl_run_attrs!();
 
     fn accelerate_step(&self) -> usize {
         4
@@ -450,14 +396,6 @@ impl Run for LuukHerssen {
 
     fn decelerate_step(&self) -> usize {
         2
-    }
-
-    fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
-    where
-        R: Rng + ?Sized,
-    {
-        let n = self.roll(rng);
-        self.make_step(n, track, map, rng)
     }
 }
 
@@ -490,13 +428,7 @@ impl Run for BuDaWang {
 
     fn set_extra(&mut self, _extra: isize) {}
 
-    fn get_pos(&self) -> (usize, usize) {
-        self.pos
-    }
-
-    fn set_pos(&mut self, pos: (usize, usize)) {
-        self.pos = pos
-    }
+    impl_run_pos!();
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
@@ -544,6 +476,11 @@ impl Run for BuDaWang {
         }
 
         self.set_pos((target_x, 0));
+        track[target_x]
+            .iter()
+            .enumerate()
+            .skip(1)
+            .for_each(|(idx, dango)| dango.borrow_mut().set_pos((target_x, idx)));
 
         false
     }
@@ -552,13 +489,25 @@ impl Run for BuDaWang {
         let (x, _) = self.get_pos();
         if track[x].len() == 1 && no_dango(&track[0..x]) {
             let self_dango = track[x].pop().unwrap();
-            track[TRACK_LEN - 1].push(self_dango);
+            track[TRACK_LEN - 1].insert(0, self_dango);
+            self.set_pos((TRACK_LEN - 1, 0));
         }
     }
 }
 
+// #[inline]
+// fn point_to_self<T>(pointer: &RefCell<T>, x: &T) -> bool {
+//     std::ptr::eq(pointer.as_ptr(), x)
+// }
+
 fn is_budawang(dango: &RefDango) -> bool {
-    matches!(*dango.borrow(), Dango::BuDaWang(_))
+    // dango 可能是当前正在行动的团子，那么就已经发生过 borrow_mut，导致再次 borrow 失败
+    // 只要 budawang 不调用这个函数，那么 try_borrow 的判断逻辑就没问题
+    dango
+        .try_borrow()
+        .is_ok_and(|x| matches!(*x, Dango::BuDaWang(_)))
+
+    // matches!(*dango.borrow(), Dango::BuDaWang(_))
 }
 
 fn has_budawang(range: &[Point]) -> bool {
@@ -598,6 +547,30 @@ pub type RefDango = Rc<RefCell<Dango>>;
 impl Dango {
     fn new(dango: Dango) -> RefDango {
         Rc::new(RefCell::new(dango))
+    }
+
+    pub fn fullname(&self) -> &'static str {
+        match self {
+            Dango::Denia(_) => "达妮娅",
+            Dango::Sigrika(_) => "西格莉卡",
+            Dango::Hiyuki(_) => "绯雪",
+            Dango::Cartethyia(_) => "卡提希娅",
+            Dango::Phoebe(_) => "菲比",
+            Dango::LuukHerssen(_) => "陆·赫斯",
+            Dango::BuDaWang(_) => "布大王",
+        }
+    }
+
+    pub fn shortname(&self) -> &'static str {
+        match self {
+            Dango::Denia(_) => "达",
+            Dango::Sigrika(_) => "西",
+            Dango::Hiyuki(_) => "绯",
+            Dango::Cartethyia(_) => "卡",
+            Dango::Phoebe(_) => "菲",
+            Dango::LuukHerssen(_) => "陆",
+            Dango::BuDaWang(_) => "布",
+        }
     }
 }
 

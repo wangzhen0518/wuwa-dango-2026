@@ -2,7 +2,7 @@ use rand::{rngs::ThreadRng, seq::SliceRandom};
 
 use crate::{
     dangos::{RefDango, Run},
-    track::{Map, TRACK_LEN, Track, init_map, init_track},
+    track::{Map, TRACK_LEN, Track, init_map, init_track, show_track},
 };
 
 mod dangos;
@@ -18,6 +18,7 @@ pub struct GameState {
     before_run_dangos: Vec<RefDango>,
     after_run_dangos: Vec<RefDango>,
     budawang: RefDango,
+    round: usize,
 }
 
 // fn one_round() {
@@ -30,6 +31,7 @@ pub struct GameState {
 // }
 
 impl GameState {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         rng: ThreadRng,
         map: Map,
@@ -38,6 +40,7 @@ impl GameState {
         before_run_dangos: Vec<RefDango>,
         after_run_dangos: Vec<RefDango>,
         budawang: RefDango,
+        round: usize,
     ) -> Self {
         Self {
             rng,
@@ -47,6 +50,7 @@ impl GameState {
             before_run_dangos,
             after_run_dangos,
             budawang,
+            round,
         }
     }
 }
@@ -71,6 +75,12 @@ fn init_game() -> GameState {
     let after_run_dangos = vec![];
 
     dangos.shuffle(&mut rng);
+    // 根据前进先后顺序更新纵向位置坐标，数组末尾最后一个行动，坐标为 0
+    dangos
+        .iter()
+        .rev()
+        .enumerate()
+        .for_each(|(idx, dango)| dango.borrow_mut().set_pos((0, idx)));
     let track = init_track(&dangos);
 
     GameState::new(
@@ -81,6 +91,7 @@ fn init_game() -> GameState {
         before_run_dangos,
         after_run_dangos,
         budawang,
+        0,
     )
 }
 
@@ -95,10 +106,13 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
         before_run_dangos,
         mut after_run_dangos,
         budawang,
+        round: _,
     } = first_half_finish_state.unwrap_or_else(init_game);
 
     // if !from_beginning, budawang 的 pos 为上一轮结束时的位置，需要清理
     budawang.borrow_mut().set_pos((TRACK_LEN - 1, 0));
+
+    show_track(0, &track);
 
     // 4. 循环 run，直到有团子到达终点
     let mut round = 0;
@@ -131,6 +145,7 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
         for dango in after_run_dangos.iter() {
             dango.borrow_mut().after_run(&mut track);
         }
+        show_track(round, &track);
     }
 
     // 将布大王从 track 中移除
@@ -148,10 +163,12 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
         before_run_dangos,
         after_run_dangos,
         budawang,
+        round,
     )
 }
 
 fn main() {
-    let finish_state = one_game(None);
-    dbg!(&finish_state);
+    let _finish_state = one_game(None);
+    // dbg!(&finish_state);
+    // show_track(finish_state.round, &finish_state.track);
 }

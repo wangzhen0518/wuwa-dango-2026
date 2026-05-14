@@ -7,3 +7,4 @@ default-run = "wuwa-dango-2026"
 [dependencies]
 ambassador = "0.5.1"
 rand = "0.10.1"
+unicode-width = "0.2.2"
