@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use unicode_width::UnicodeWidthStr;
 
-use crate::dangos::RefDango;
+use crate::dangos::{RefDango, Run};
 
 pub const TRACK_LEN: usize = 32;
 
@@ -42,7 +42,7 @@ pub fn init_track(dangos: &[RefDango]) -> Track {
 pub fn show_track(round: usize, track: &Track) {
     const ROW_NUM: usize = 8;
     const COL_NUM: usize = 4;
-    const COL_WIDTH: usize = 24;
+    const COL_WIDTH: usize = 42;
     const LINE_WIDTH: usize = COL_WIDTH * COL_NUM;
     const SEP_NUM: usize = (LINE_WIDTH - 4) / 2;
 
@@ -53,8 +53,13 @@ pub fn show_track(round: usize, track: &Track) {
             let point = &track[idx];
             let mut cell = format!("{:2}: ", idx + 1);
             for dango in point {
-                cell.push_str(dango.borrow().shortname());
-                cell.push(' ');
+                write!(
+                    &mut cell,
+                    "{}({}) ",
+                    dango.borrow().shortname(),
+                    dango.borrow().get_arrive_count()
+                )
+                .unwrap();
             }
             let cell_width = UnicodeWidthStr::width(cell.as_str());
             write!(&mut track_state, "{cell}").unwrap();

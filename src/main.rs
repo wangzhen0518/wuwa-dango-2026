@@ -1,7 +1,9 @@
+use std::fmt::Write;
+
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 
 use crate::{
-    dangos::{RefDango, Run},
+    dangos::{RefDango, Run, is_budawang},
     track::{Map, TRACK_LEN, Track, init_map, init_track, show_track},
 };
 
@@ -109,8 +111,14 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
         round: _,
     } = first_half_finish_state.unwrap_or_else(init_game);
 
-    // if !from_beginning, budawang 的 pos 为上一轮结束时的位置，需要清理
-    budawang.borrow_mut().set_pos((TRACK_LEN - 1, 0));
+    if !from_beginning {
+        budawang.borrow_mut().set_pos((TRACK_LEN - 1, 0)); // budawang 的 pos 为上一轮结束时的位置，需要清理
+        dangos.iter().for_each(|dango| {
+            let mut dango = dango.borrow_mut();
+            dango.reset(); // 重置 dango 的部分属性
+            dango.increase_target_arrive_count(); // 增加 dango 需要到达终点的次数
+        });
+    }
 
     show_track(0, &track);
 
@@ -148,11 +156,19 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
         show_track(round, &track);
     }
 
-    // 将布大王从 track 中移除
+    // 将布大王从比赛状态中移除
     {
+        dangos.retain(|dango| !is_budawang(dango));
+        after_run_dangos.retain(|dango| !is_budawang(dango));
+
         let budawang = budawang.borrow();
         let (x, _) = budawang.get_pos();
         track[x].remove(0);
+        // 更新 track[x] 处所有 dango 的坐标
+        track[x]
+            .iter()
+            .enumerate()
+            .for_each(|(idx, dango)| dango.borrow_mut().set_pos((x, idx)));
     }
 
     GameState::new(
@@ -167,8 +183,50 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
     )
 }
 
+fn sort_by_dangos(dangos: &mut [RefDango]) {
+    dangos.sort_by(|a, b| {
+        let (x_a, y_a) = a.borrow().get_pos();
+        let (x_b, y_b) = b.borrow().get_pos();
+        if x_a == x_b {
+            y_a.cmp(&y_b)
+        } else {
+            x_a.cmp(&x_b)
+        }
+    });
+    dangos.reverse();
+}
+
+fn sort_by_track(track: &Track) -> Vec<RefDango> {
+    track
+        .iter()
+        .rev()
+        .flat_map(|point| point.iter().rev())
+        .cloned()
+        .collect()
+}
+
+fn show_rank(dangos: &[RefDango]) {
+    let mut rank_info = String::with_capacity(10 * dangos.len());
+    for dango in dangos.iter() {
+        let dango = dango.borrow();
+        let (x, y) = dango.get_pos();
+        write!(&mut rank_info, "{}({}, {}), ", dango.shortname(), x, y).unwrap();
+    }
+    println!("{}", rank_info);
+}
+
 fn main() {
-    let _finish_state = one_game(None);
-    // dbg!(&finish_state);
-    // show_track(finish_state.round, &finish_state.track);
+    println!("Start first half game");
+    let mut half_state = one_game(None);
+    show_track(half_state.round, &half_state.track);
+    sort_by_dangos(&mut half_state.dangos);
+    show_rank(&half_state.dangos);
+    show_rank(&sort_by_track(&half_state.track));
+
+    println!("Start second half game");
+    let mut finish_state = one_game(Some(half_state));
+    show_track(finish_state.round, &finish_state.track);
+    sort_by_dangos(&mut finish_state.dangos);
+    show_rank(&finish_state.dangos);
+    show_rank(&sort_by_track(&finish_state.track));
 }

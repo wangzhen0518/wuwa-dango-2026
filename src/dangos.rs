@@ -30,6 +30,22 @@ macro_rules! impl_run_attrs {
         fn set_pos(&mut self, pos: (usize, usize)) {
             self.pos = pos
         }
+
+        fn get_arrive_count(&self) -> usize {
+            self.arrive_count
+        }
+
+        fn increase_arrive_count(&mut self) {
+            self.arrive_count += 1;
+        }
+
+        fn get_target_arrive_count(&self) -> usize {
+            self.target_arrive_count
+        }
+
+        fn increase_target_arrive_count(&mut self) {
+            self.target_arrive_count += 1;
+        }
     };
 }
 
@@ -47,6 +63,10 @@ macro_rules! impl_run_pos {
 
 #[delegatable_trait]
 pub trait Run {
+    fn reset(&mut self) {
+        self.set_extra(0);
+    }
+
     fn roll<R>(&self, rng: &mut R) -> usize
     where
         R: Rng + ?Sized,
@@ -59,6 +79,12 @@ pub trait Run {
 
     fn get_pos(&self) -> (usize, usize);
     fn set_pos(&mut self, pos: (usize, usize));
+
+    fn get_arrive_count(&self) -> usize;
+    fn increase_arrive_count(&mut self);
+
+    fn get_target_arrive_count(&self) -> usize;
+    fn increase_target_arrive_count(&mut self);
 
     fn accelerate_step(&self) -> usize {
         1
@@ -83,11 +109,28 @@ pub trait Run {
         let n = n.saturating_add_signed(self.get_extra()).max(1);
         let (x, y) = self.get_pos();
 
+        // 还需要达到终点的次数
+        let remain_arrive_count = self.get_target_arrive_count() - self.get_arrive_count();
+
         // 移除尾部元素
         let mut tail = track[x].split_off(y);
 
-        // 计算目标行，限制在有效范围
-        let mut target_x = (x + n).min(track.len() - 1);
+        // 计算目标行；剩余 > 1 时不限制不超过终点
+        let mut target_x = if remain_arrive_count > 1 {
+            x + n
+        } else {
+            (x + n).min(track.len() - 1)
+        };
+
+        // 越过终点
+        if target_x >= track.len() {
+            self.increase_arrive_count();
+            tail[1..]
+                .iter()
+                .for_each(|dango| dango.borrow_mut().increase_arrive_count());
+            target_x %= track.len();
+        }
+
         // 将尾部元素追加到目标行
         let mut target_y = track[target_x].len();
         track[target_x].append(&mut tail);
@@ -96,11 +139,23 @@ pub trait Run {
             PointType::Common => {}
             PointType::Accelerate => {
                 let acc = self.accelerate_step();
-                let new_x = (target_x + acc).min(track.len() - 1);
-                let (left, right) = track.split_at_mut(new_x);
-
-                target_y += right[0].len();
-                right[0].append(&mut left[target_x]);
+                let mut new_x = target_x + acc;
+                if new_x >= track.len() {
+                    self.increase_arrive_count();
+                    track[target_x][target_y + 1..]
+                        .iter()
+                        .for_each(|dango| dango.borrow_mut().increase_arrive_count());
+                    new_x %= track.len();
+                }
+                if new_x > target_x {
+                    let (left, right) = track.split_at_mut(new_x);
+                    target_y += right[0].len();
+                    right[0].append(&mut left[target_x]);
+                } else if new_x < target_x {
+                    let (left, right) = track.split_at_mut(target_x);
+                    target_y += left[new_x].len();
+                    left[new_x].append(&mut right[0]);
+                }
                 target_x = new_x;
             }
             PointType::Decelerate => {
@@ -139,12 +194,7 @@ pub trait Run {
             .filter(|(idx, _)| *idx != target_y)
             .for_each(|(idx, dango)| dango.borrow_mut().set_pos((target_x, idx)));
 
-        // drop(self);
-        // for (idx, dango) in track[target_x].iter().enumerate() {
-        //     dango.borrow_mut().set_pos((target_x, idx));
-        // }
-
-        target_x == (track.len() - 1)
+        self.get_arrive_count() == self.get_target_arrive_count() - 1 && target_x == track.len() - 1
     }
 
     fn before_run(&mut self, _track: &mut Track) {}
@@ -159,6 +209,8 @@ pub struct Denia {
     pos: (usize, usize),
     /// buff 或 debuff 效果
     extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
 }
 
 impl Denia {
@@ -167,11 +219,18 @@ impl Denia {
             last_dice: 0,
             pos: (0, 0),
             extra: 0,
+            arrive_count: 0,
+            target_arrive_count: 1,
         }
     }
 }
 
 impl Run for Denia {
+    fn reset(&mut self) {
+        self.last_dice = 0;
+        self.extra = 0;
+    }
+
     impl_run_attrs!();
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
@@ -195,6 +254,8 @@ pub struct Sigrika {
     pos: (usize, usize),
     /// buff 或 debuff 效果
     extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
 }
 
 impl Sigrika {
@@ -202,6 +263,8 @@ impl Sigrika {
         Self {
             pos: (0, 0),
             extra: 0,
+            arrive_count: 0,
+            target_arrive_count: 1,
         }
     }
 }
@@ -239,6 +302,8 @@ pub struct Hiyuki {
     pos: (usize, usize),
     /// buff 或 debuff 效果
     extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
 }
 
 impl Hiyuki {
@@ -247,11 +312,18 @@ impl Hiyuki {
             meeted: false,
             pos: (0, 0),
             extra: 0,
+            arrive_count: 0,
+            target_arrive_count: 1,
         }
     }
 }
 
 impl Run for Hiyuki {
+    fn reset(&mut self) {
+        self.meeted = false;
+        self.extra = 0;
+    }
+
     impl_run_attrs!();
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
@@ -274,13 +346,16 @@ impl Run for Hiyuki {
         // 移动结束后，
         if !arrived && !self.meeted {
             let (new_x, _) = self.get_pos();
-            self.meeted = has_budawang(&track[old_x + 1..=new_x]);
+            // 没有考虑绯雪越过终点绕一圈之后，仍 new_x > old_x 的情况，应该不会发生这种情况
+            if new_x > old_x {
+                self.meeted = has_budawang(&track[old_x + 1..=new_x]);
+            } else {
+                self.meeted = has_budawang(&track[old_x + 1..]) || has_budawang(&track[..=new_x]);
+            }
         }
 
         arrived
     }
-
-    // TODO 团子的一些状态属性，在下半场开始时需要进行重置
 }
 
 #[derive(Debug, Clone)]
@@ -291,6 +366,8 @@ pub struct Cartethyia {
     pos: (usize, usize),
     /// buff 或 debuff 效果
     extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
 }
 
 impl Cartethyia {
@@ -301,11 +378,18 @@ impl Cartethyia {
             has_been_last: false,
             pos: (0, 0),
             extra: 0,
+            arrive_count: 0,
+            target_arrive_count: 1,
         }
     }
 }
 
 impl Run for Cartethyia {
+    fn reset(&mut self) {
+        self.has_been_last = false;
+        self.extra = 0;
+    }
+
     impl_run_attrs!();
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
@@ -329,9 +413,6 @@ impl Run for Cartethyia {
 
         arrived
     }
-
-    // TODO 卡提希娅如果在上半场结束时是最后一名
-    // 那么下半场开始时（即卡提希娅移动之前）是否触发技能
 }
 
 #[derive(Debug, Clone)]
@@ -340,6 +421,8 @@ pub struct Phoebe {
     pos: (usize, usize),
     /// buff 或 debuff 效果
     extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
 }
 
 impl Phoebe {
@@ -349,6 +432,8 @@ impl Phoebe {
         Self {
             pos: (0, 0),
             extra: 0,
+            arrive_count: 0,
+            target_arrive_count: 1,
         }
     }
 }
@@ -376,6 +461,8 @@ pub struct LuukHerssen {
     pos: (usize, usize),
     /// buff 或 debuff 效果
     extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
 }
 
 impl LuukHerssen {
@@ -383,6 +470,8 @@ impl LuukHerssen {
         Self {
             pos: (0, 0),
             extra: 0,
+            arrive_count: 0,
+            target_arrive_count: 1,
         }
     }
 }
@@ -428,6 +517,18 @@ impl Run for BuDaWang {
 
     fn set_extra(&mut self, _extra: isize) {}
 
+    fn get_arrive_count(&self) -> usize {
+        0
+    }
+
+    fn increase_arrive_count(&mut self) {}
+
+    fn get_target_arrive_count(&self) -> usize {
+        0
+    }
+
+    fn increase_target_arrive_count(&mut self) {}
+
     impl_run_pos!();
 
     fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
@@ -436,7 +537,7 @@ impl Run for BuDaWang {
     {
         let n = self.roll(rng);
 
-        let (x, _) = self.get_pos(); // y==0 恒成立
+        let (x, _) = self.get_pos(); // y == 0 恒成立
 
         // 计算目标行，限制在有效范围
         let mut target_x = x.saturating_sub(n);
@@ -500,7 +601,7 @@ impl Run for BuDaWang {
 //     std::ptr::eq(pointer.as_ptr(), x)
 // }
 
-fn is_budawang(dango: &RefDango) -> bool {
+pub fn is_budawang(dango: &RefDango) -> bool {
     // dango 可能是当前正在行动的团子，那么就已经发生过 borrow_mut，导致再次 borrow 失败
     // 只要 budawang 不调用这个函数，那么 try_borrow 的判断逻辑就没问题
     dango
