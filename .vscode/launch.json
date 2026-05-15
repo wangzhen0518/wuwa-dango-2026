@@ -11,7 +11,7 @@
       "cargo": {
         "args": ["run", "--bin=wuwa-dango-2026"]
       },
-      "args": []
+      "args": ["1"]
     },
     {
       "name": "Debug unit tests in executable 'wuwa-dango-2026'",

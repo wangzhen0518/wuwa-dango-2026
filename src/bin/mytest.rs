@@ -1,6 +1,8 @@
 #![allow(warnings)]
 
-use std::{cell::RefCell, ops::DerefMut, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, ops::DerefMut, rc::Rc};
+
+use rand::seq::SliceRandom;
 
 struct MyStruct {
     inner: usize,
@@ -29,4 +31,11 @@ fn main() {
     let y = x.as_ref();
     let mut z = x.borrow_mut();
     let a = z.deref_mut();
+
+    let mut b = [(1, 2), (4, 3), (2, 1), (3, 4), (2, 3)];
+    b.sort();
+    dbg!(&b);
+
+    let mut c = VecDeque::from([1, 3, 2]);
+    c.make_contiguous().shuffle(&mut rand::rng());
 }

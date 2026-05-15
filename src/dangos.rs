@@ -15,6 +15,14 @@ static COMMON_DICE: [usize; 6] = [1, 1, 2, 2, 3, 3];
 
 macro_rules! impl_run_attrs {
     () => {
+        fn get_n(&self) -> usize {
+            self.n
+        }
+
+        fn set_n(&mut self, n: usize) {
+            self.n = n
+        }
+
         fn get_extra(&self) -> isize {
             self.extra
         }
@@ -49,30 +57,23 @@ macro_rules! impl_run_attrs {
     };
 }
 
-macro_rules! impl_run_pos {
-    () => {
-        fn get_pos(&self) -> (usize, usize) {
-            self.pos
-        }
-
-        fn set_pos(&mut self, pos: (usize, usize)) {
-            self.pos = pos
-        }
-    };
-}
-
 #[delegatable_trait]
 pub trait Run {
     fn reset(&mut self) {
         self.set_extra(0);
+        self.set_n(0);
     }
 
-    fn roll<R>(&self, rng: &mut R) -> usize
+    fn roll<R>(&mut self, rng: &mut R)
     where
         R: Rng + ?Sized,
     {
-        *COMMON_DICE.choose(rng).unwrap()
+        let n = *COMMON_DICE.choose(rng).expect("Roll failed");
+        self.set_n(n);
     }
+
+    fn get_n(&self) -> usize;
+    fn set_n(&mut self, n: usize);
 
     fn get_extra(&self) -> isize;
     fn set_extra(&mut self, extra: isize);
@@ -94,19 +95,18 @@ pub trait Run {
         1
     }
 
-    fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
+    fn step<R>(&mut self, _dangos: &[RefDango], track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
-        let n = self.roll(rng);
-        self.make_step(n, track, map, rng)
+        self.make_step(track, map, rng)
     }
 
-    fn make_step<R>(&mut self, n: usize, track: &mut Track, map: &Map, rng: &mut R) -> bool
+    fn make_step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
-        let n = n.saturating_add_signed(self.get_extra()).max(1);
+        let n = self.get_n().saturating_add_signed(self.get_extra()).max(1);
         let (x, y) = self.get_pos();
 
         // 还需要达到终点的次数
@@ -197,13 +197,14 @@ pub trait Run {
         self.get_arrive_count() == self.get_target_arrive_count() - 1 && target_x == track.len() - 1
     }
 
-    fn before_run(&mut self, _track: &mut Track) {}
+    fn before_run(&mut self, _dangos: &[RefDango], _track: &mut Track) {}
 
-    fn after_run(&mut self, _track: &mut Track) {}
+    fn after_run(&mut self, _dangos: &[RefDango], _track: &mut Track) {}
 }
 
 #[derive(Debug, Clone)]
 pub struct Denia {
+    n: usize,
     last_dice: usize,
     /// (track position, height)
     pos: (usize, usize),
@@ -216,6 +217,7 @@ pub struct Denia {
 impl Denia {
     pub fn new() -> Self {
         Self {
+            n: 0,
             last_dice: 0,
             pos: (0, 0),
             extra: 0,
@@ -229,27 +231,28 @@ impl Run for Denia {
     fn reset(&mut self) {
         self.last_dice = 0;
         self.extra = 0;
+        self.n = 0;
     }
 
     impl_run_attrs!();
 
-    fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
+    fn step<R>(&mut self, _dangos: &[RefDango], track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
-        let n = self.roll(rng);
-
+        let n = self.get_n();
         if n == self.last_dice {
             self.extra += 2;
         }
         self.last_dice = n;
 
-        self.make_step(n, track, map, rng)
+        self.make_step(track, map, rng)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Sigrika {
+    n: usize,
     /// (track position, height)
     pos: (usize, usize),
     /// buff 或 debuff 效果
@@ -261,6 +264,7 @@ pub struct Sigrika {
 impl Sigrika {
     pub fn new() -> Self {
         Self {
+            n: 0,
             pos: (0, 0),
             extra: 0,
             arrive_count: 0,
@@ -272,30 +276,36 @@ impl Sigrika {
 impl Run for Sigrika {
     impl_run_attrs!();
 
-    fn before_run(&mut self, track: &mut Track) {
-        let (x, y) = self.get_pos();
-        track[x..]
+    fn before_run(&mut self, dangos: &[RefDango], track: &mut Track) {
+        // 收集除布大王外，领先于自己的团子
+        let mut dangos: Vec<_> = dangos
             .iter()
-            .enumerate()
-            .flat_map(|(i, point)| {
-                if i == 0 {
-                    point[y + 1..].iter()
-                } else {
-                    point.iter()
-                }
+            .filter(|dango| {
+                dango.try_borrow_mut().is_ok_and(|d| {
+                    !matches!(*d, Dango::BuDaWang(_))
+                        && d.get_arrive_count()
+                            .cmp(&self.get_arrive_count())
+                            .then(d.get_pos().cmp(&self.get_pos()))
+                            .is_gt()
+                })
             })
-            .filter(|dango| !is_budawang(dango))
-            .take(2)
-            .for_each(|dango| {
+            .cloned()
+            .collect();
+
+        if !dangos.is_empty() {
+            sort_dangos(&mut dangos);
+            dangos.iter().rev().take(2).for_each(|dango| {
                 let mut dango = dango.borrow_mut();
                 let target_extra = dango.get_extra() - 1;
                 dango.set_extra(target_extra);
             });
+        }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Hiyuki {
+    n: usize,
     /// 是否遇到过布大王
     meeted: bool,
     /// (track position, height)
@@ -309,6 +319,7 @@ pub struct Hiyuki {
 impl Hiyuki {
     pub fn new() -> Self {
         Self {
+            n: 0,
             meeted: false,
             pos: (0, 0),
             extra: 0,
@@ -322,16 +333,15 @@ impl Run for Hiyuki {
     fn reset(&mut self) {
         self.meeted = false;
         self.extra = 0;
+        self.n = 0;
     }
 
     impl_run_attrs!();
 
-    fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
+    fn step<R>(&mut self, dangos: &[RefDango], track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
-        let n = self.roll(rng);
-
         let (old_x, _) = self.get_pos();
 
         // 绯雪上轮行动后至此轮行动前，被布大王经过
@@ -341,7 +351,7 @@ impl Run for Hiyuki {
 
         self.extra = self.meeted as isize;
 
-        let arrived = self.make_step(n, track, map, rng);
+        let arrived = self.make_step(track, map, rng);
 
         // 移动结束后，
         if !arrived && !self.meeted {
@@ -360,6 +370,7 @@ impl Run for Hiyuki {
 
 #[derive(Debug, Clone)]
 pub struct Cartethyia {
+    n: usize,
     /// 是否成为过最后一名
     has_been_last: bool,
     /// (track position, height)
@@ -375,11 +386,39 @@ impl Cartethyia {
 
     pub fn new() -> Self {
         Self {
+            n: 0,
             has_been_last: false,
             pos: (0, 0),
             extra: 0,
             arrive_count: 0,
             target_arrive_count: 1,
+        }
+    }
+
+    fn is_last(&self, dangos: &[RefDango]) -> bool {
+        // 收集除自己和布大王以外、落后于自己的团子
+        let mut after_self_dangos: Vec<_> = dangos
+            .iter()
+            .filter(|dango| {
+                dango.try_borrow().is_ok_and(|d| {
+                    !matches!(*d, Dango::BuDaWang(_))
+                        && d.get_arrive_count()
+                            .cmp(&self.get_arrive_count())
+                            .then(d.get_pos().cmp(&self.get_pos()))
+                            .is_lt()
+                })
+            })
+            .cloned()
+            .collect();
+
+        if cfg!(debug_assertions) {
+            if after_self_dangos.is_empty() {
+                true
+            } else {
+                false
+            }
+        } else {
+            after_self_dangos.is_empty()
         }
     }
 }
@@ -388,26 +427,28 @@ impl Run for Cartethyia {
     fn reset(&mut self) {
         self.has_been_last = false;
         self.extra = 0;
+        self.n = 0;
     }
 
     impl_run_attrs!();
 
-    fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
+    fn step<R>(&mut self, dangos: &[RefDango], track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
-        let n = self.roll(rng);
-
         if self.has_been_last && rng.random_bool(Cartethyia::EXTRA_ADVANCE_PROB) {
             self.extra += 2;
         }
 
-        let arrived = self.make_step(n, track, map, rng);
+        let arrived = self.make_step(track, map, rng);
 
         if !arrived && !self.has_been_last {
-            let (x, y) = self.get_pos();
-            if y == 0 && !no_dango(&track[0..x]) {
-                self.has_been_last = true;
+            if cfg!(debug_assertions) {
+                if self.is_last(dangos) {
+                    self.has_been_last = true
+                }
+            } else {
+                self.has_been_last = self.is_last(dangos);
             }
         }
 
@@ -417,6 +458,7 @@ impl Run for Cartethyia {
 
 #[derive(Debug, Clone)]
 pub struct Phoebe {
+    n: usize,
     /// (track position, height)
     pos: (usize, usize),
     /// buff 或 debuff 效果
@@ -430,6 +472,7 @@ impl Phoebe {
 
     pub fn new() -> Self {
         Self {
+            n: 0,
             pos: (0, 0),
             extra: 0,
             arrive_count: 0,
@@ -441,22 +484,21 @@ impl Phoebe {
 impl Run for Phoebe {
     impl_run_attrs!();
 
-    fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
+    fn step<R>(&mut self, _dangos: &[RefDango], track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
-        let n = self.roll(rng);
-
         if rng.random_bool(Phoebe::EXTRA_ADVANCE_PROB) {
             self.extra += 1;
         }
 
-        self.make_step(n, track, map, rng)
+        self.make_step(track, map, rng)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct LuukHerssen {
+    n: usize,
     /// (track position, height)
     pos: (usize, usize),
     /// buff 或 debuff 效果
@@ -468,6 +510,7 @@ pub struct LuukHerssen {
 impl LuukHerssen {
     pub fn new() -> Self {
         Self {
+            n: 0,
             pos: (0, 0),
             extra: 0,
             arrive_count: 0,
@@ -490,6 +533,7 @@ impl Run for LuukHerssen {
 
 #[derive(Debug, Clone)]
 pub struct BuDaWang {
+    n: usize,
     pos: (usize, usize),
 }
 
@@ -498,17 +542,46 @@ impl BuDaWang {
 
     pub fn new() -> Self {
         Self {
+            n: 0,
             pos: (TRACK_LEN - 1, 0),
         }
+    }
+
+    fn leave_last_dango(&self, dangos: &[RefDango]) -> bool {
+        let (x, _) = self.get_pos();
+
+        // 考虑能否提取 get_last_dango 函数
+        // 收集除布大王以外的团子
+        let mut dangos: Vec<_> = dangos
+            .iter()
+            .filter(|dango| dango.try_borrow_mut().is_ok())
+            .cloned()
+            .collect();
+
+        sort_dangos(&mut dangos);
+
+        let last_dango = dangos.last().expect("Always can get dango");
+        let (last_x, last_y) = last_dango.borrow().get_pos();
+
+        last_x > x
     }
 }
 
 impl Run for BuDaWang {
-    fn roll<R>(&self, rng: &mut R) -> usize
+    fn roll<R>(&mut self, rng: &mut R)
     where
         R: Rng + ?Sized,
     {
-        *BuDaWang::BUDAWANG_DICE.choose(rng).unwrap()
+        let n = *BuDaWang::BUDAWANG_DICE.choose(rng).expect("Roll failed");
+        self.n = n;
+    }
+
+    fn get_n(&self) -> usize {
+        self.n
+    }
+
+    fn set_n(&mut self, n: usize) {
+        self.n = n;
     }
 
     fn get_extra(&self) -> isize {
@@ -516,6 +589,14 @@ impl Run for BuDaWang {
     }
 
     fn set_extra(&mut self, _extra: isize) {}
+
+    fn get_pos(&self) -> (usize, usize) {
+        self.pos
+    }
+
+    fn set_pos(&mut self, pos: (usize, usize)) {
+        self.pos = pos
+    }
 
     fn get_arrive_count(&self) -> usize {
         0
@@ -529,13 +610,11 @@ impl Run for BuDaWang {
 
     fn increase_target_arrive_count(&mut self) {}
 
-    impl_run_pos!();
-
-    fn step<R>(&mut self, track: &mut Track, map: &Map, rng: &mut R) -> bool
+    fn step<R>(&mut self, _dangos: &[RefDango], track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
-        let n = self.roll(rng);
+        let n = self.get_n();
 
         let (x, _) = self.get_pos(); // y == 0 恒成立
 
@@ -586,12 +665,24 @@ impl Run for BuDaWang {
         false
     }
 
-    fn after_run(&mut self, track: &mut Track) {
-        let (x, _) = self.get_pos();
-        if track[x].len() == 1 && no_dango(&track[0..x]) {
-            let self_dango = track[x].pop().unwrap();
-            track[TRACK_LEN - 1].insert(0, self_dango);
+    fn after_run(&mut self, dangos: &[RefDango], track: &mut Track) {
+        if self.leave_last_dango(dangos) {
+            let (x, _) = self.get_pos();
+
+            // remove(0) 而不是 pop，因为可能已经与最后一名分离了，但是可能有团子已经跑了一圈来到布大王上方了
+            let self_dango = track[x].remove(0);
+            track[x]
+                .iter()
+                .enumerate()
+                .for_each(|(idx, dango)| dango.borrow_mut().set_pos((x, idx)));
+
             self.set_pos((TRACK_LEN - 1, 0));
+            track[TRACK_LEN - 1].insert(0, self_dango);
+            track[TRACK_LEN - 1]
+                .iter()
+                .enumerate()
+                .skip(1)
+                .for_each(|(idx, dango)| dango.borrow_mut().set_pos((TRACK_LEN - 1, idx)));
         }
     }
 }
@@ -629,6 +720,18 @@ fn no_dango(range: &[Point]) -> bool {
         point.is_empty() // 团子所在位置的后面都没有其他团子
         || (point.len() == 1 && is_budawang(&point[0])) // 或者只有布大王
     })
+}
+
+pub fn sort_dangos(dangos: &mut [RefDango]) {
+    dangos.sort_by(|a, b| {
+        let a = a.borrow();
+        let b = b.borrow();
+
+        a.get_arrive_count()
+            .cmp(&b.get_arrive_count())
+            .then(a.get_pos().cmp(&b.get_pos()))
+    });
+    dangos.reverse();
 }
 
 #[derive(Debug, Clone, Delegate)]

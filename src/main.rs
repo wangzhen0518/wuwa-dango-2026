@@ -1,6 +1,16 @@
-use std::fmt::Write;
+#![allow(unused)]
 
-use rand::{rngs::ThreadRng, seq::SliceRandom};
+use std::{
+    fmt::Write,
+    ops::{Deref, DerefMut},
+};
+
+use ambassador::{Delegate, delegatable_trait_remote};
+use rand::{
+    SeedableRng, TryRng,
+    rngs::{StdRng, ThreadRng},
+    seq::SliceRandom,
+};
 
 use crate::{
     dangos::{RefDango, Run, is_budawang},
@@ -11,9 +21,38 @@ mod dangos;
 mod track;
 mod utils;
 
-#[derive(Debug, Clone)]
+#[delegatable_trait_remote]
+trait TryRng {
+    type Error: core::error::Error;
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error>;
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error>;
+    fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error>;
+}
+
+#[derive(Delegate)]
+#[delegate(TryRng)]
+pub enum MyRng {
+    StdRng(Box<StdRng>),
+    ThreadRng(ThreadRng),
+}
+
+// impl DerefMut for MyRng {}
+
+impl From<StdRng> for MyRng {
+    fn from(rng: StdRng) -> Self {
+        MyRng::StdRng(Box::new(rng))
+    }
+}
+
+impl From<ThreadRng> for MyRng {
+    fn from(rng: ThreadRng) -> Self {
+        MyRng::ThreadRng(rng)
+    }
+}
+
 pub struct GameState {
-    rng: ThreadRng,
+    // rng: ThreadRng,
+    rng: MyRng,
     map: Map,
     dangos: Vec<RefDango>,
     track: Track,
@@ -35,7 +74,7 @@ pub struct GameState {
 impl GameState {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        rng: ThreadRng,
+        rng: MyRng,
         map: Map,
         dangos: Vec<RefDango>,
         track: Track,
@@ -58,7 +97,13 @@ impl GameState {
 }
 
 fn init_game() -> GameState {
-    let mut rng = rand::rng();
+    let seed: u64 = std::env::args().nth(1).unwrap().parse().unwrap();
+    let mut rng = StdRng::seed_from_u64(seed);
+    println!("seed = {}", seed);
+
+    // let mut rng = StdRng::seed_from_u64(38);
+
+    // let mut rng = rand::rng();
 
     let map = init_map();
 
@@ -86,7 +131,7 @@ fn init_game() -> GameState {
     let track = init_track(&dangos);
 
     GameState::new(
-        rng,
+        rng.into(),
         map,
         dangos,
         track,
@@ -112,7 +157,6 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
     } = first_half_finish_state.unwrap_or_else(init_game);
 
     if !from_beginning {
-        budawang.borrow_mut().set_pos((TRACK_LEN - 1, 0)); // budawang 的 pos 为上一轮结束时的位置，需要清理
         dangos.iter().for_each(|dango| {
             let mut dango = dango.borrow_mut();
             dango.reset(); // 重置 dango 的部分属性
@@ -120,7 +164,7 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
         });
     }
 
-    show_track(0, &track);
+    show_track(0, &dangos, &track, &map);
 
     // 4. 循环 run，直到有团子到达终点
     let mut round = 0;
@@ -130,30 +174,41 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
 
         // 布大王第三轮开始行动
         if round == 3 {
+            budawang.borrow_mut().set_pos((TRACK_LEN - 1, 0)); // budawang 的 pos 为上一轮结束时的位置，需要清理
             dangos.push(budawang.clone());
             after_run_dangos.push(budawang.clone());
-            track[TRACK_LEN - 1].push(budawang.clone());
+            track[TRACK_LEN - 1].insert(0, budawang.clone());
+            track[TRACK_LEN - 1]
+                .iter()
+                .enumerate()
+                .skip(1)
+                .for_each(|(idx, dango)| dango.borrow_mut().set_pos((TRACK_LEN - 1, idx)));
         }
 
         if round != 1 || !from_beginning {
             dangos.shuffle(&mut rng);
 
             for dango in before_run_dangos.iter() {
-                dango.borrow_mut().before_run(&mut track);
+                dango.borrow_mut().before_run(&dangos, &mut track);
             }
         }
 
+        // 按行动顺序，先全部 roll，再依次 step
         for dango in dangos.iter() {
-            arrived = dango.borrow_mut().step(&mut track, &map, &mut rng);
+            dango.borrow_mut().roll(&mut rng);
+        }
+
+        for dango in dangos.iter() {
+            arrived = dango.borrow_mut().step(&dangos, &mut track, &map, &mut rng);
             if arrived {
                 break 'GameLoop;
             }
         }
 
         for dango in after_run_dangos.iter() {
-            dango.borrow_mut().after_run(&mut track);
+            dango.borrow_mut().after_run(&dangos, &mut track);
         }
-        show_track(round, &track);
+        show_track(round, &dangos, &track, &map);
     }
 
     // 将布大王从比赛状态中移除
@@ -183,50 +238,43 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
     )
 }
 
-fn sort_by_dangos(dangos: &mut [RefDango]) {
-    dangos.sort_by(|a, b| {
-        let (x_a, y_a) = a.borrow().get_pos();
-        let (x_b, y_b) = b.borrow().get_pos();
-        if x_a == x_b {
-            y_a.cmp(&y_b)
-        } else {
-            x_a.cmp(&x_b)
-        }
-    });
-    dangos.reverse();
-}
-
-fn sort_by_track(track: &Track) -> Vec<RefDango> {
-    track
-        .iter()
-        .rev()
-        .flat_map(|point| point.iter().rev())
-        .cloned()
-        .collect()
-}
-
+#[allow(unused)]
 fn show_rank(dangos: &[RefDango]) {
     let mut rank_info = String::with_capacity(10 * dangos.len());
     for dango in dangos.iter() {
         let dango = dango.borrow();
         let (x, y) = dango.get_pos();
-        write!(&mut rank_info, "{}({}, {}), ", dango.shortname(), x, y).unwrap();
+        write!(&mut rank_info, "{}({}, {}), ", dango.shortname(), x, y).expect("Write failed");
     }
     println!("{}", rank_info);
 }
 
 fn main() {
-    println!("Start first half game");
-    let mut half_state = one_game(None);
-    show_track(half_state.round, &half_state.track);
-    sort_by_dangos(&mut half_state.dangos);
-    show_rank(&half_state.dangos);
-    show_rank(&sort_by_track(&half_state.track));
+    if cfg!(debug_assertions) {
+        println!("Start first half game");
+    }
+    let half_state = one_game(None);
+    show_track(
+        half_state.round,
+        &half_state.dangos,
+        &half_state.track,
+        &half_state.map,
+    );
+    //sort_by_dangos(&mut half_state.dangos);
+    //show_rank(&half_state.dangos);
+    //show_rank(&sort_by_track(&half_state.track));
 
-    println!("Start second half game");
+    if cfg!(debug_assertions) {
+        println!("Start second half game");
+    }
     let mut finish_state = one_game(Some(half_state));
-    show_track(finish_state.round, &finish_state.track);
-    sort_by_dangos(&mut finish_state.dangos);
-    show_rank(&finish_state.dangos);
-    show_rank(&sort_by_track(&finish_state.track));
+    show_track(
+        finish_state.round,
+        &finish_state.dangos,
+        &finish_state.track,
+        &finish_state.map,
+    );
+    //sort_by_dangos(&mut finish_state.dangos);
+    //show_rank(&finish_state.dangos);
+    //show_rank(&sort_by_track(&finish_state.track));
 }
