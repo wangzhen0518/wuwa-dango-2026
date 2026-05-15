@@ -1,7 +1,7 @@
 目前只支持上半场，限制了 roll 点不超过 TRACK_LEN，但是下半场开始时，会有部分团子一次也没有经过终点，导致逻辑错误
 
 1. enum Dango 内部改用 `Rc<RefCell<>>`
-2. dangos 和 track 中的每个元素使用 VecDeque
+2. track 中的每个元素使用 VecDeque
 3. 投骰子阶段与前进阶段分离，角色属性中保存当前轮的 roll 点结果
 4. step 函数将 dangos vec 也作为参数传入
 5. 从 json 文件中读取比赛配置

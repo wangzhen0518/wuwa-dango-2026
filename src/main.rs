@@ -97,13 +97,14 @@ impl GameState {
 }
 
 fn init_game() -> GameState {
-    let seed: u64 = std::env::args().nth(1).unwrap().parse().unwrap();
-    let mut rng = StdRng::seed_from_u64(seed);
-    println!("seed = {}", seed);
-
-    // let mut rng = StdRng::seed_from_u64(38);
-
-    // let mut rng = rand::rng();
+    let args: Vec<_> = std::env::args().collect();
+    let mut rng = if args.len() > 1 {
+        let seed: u64 = args[1].parse().unwrap();
+        println!("seed = {}", seed);
+        StdRng::seed_from_u64(seed).into()
+    } else {
+        rand::rng().into()
+    };
 
     let map = init_map();
 
@@ -131,7 +132,7 @@ fn init_game() -> GameState {
     let track = init_track(&dangos);
 
     GameState::new(
-        rng.into(),
+        rng,
         map,
         dangos,
         track,

@@ -38,4 +38,6 @@ fn main() {
 
     let mut c = VecDeque::from([1, 3, 2]);
     c.make_contiguous().shuffle(&mut rand::rng());
+
+    // c.make_contiguous().spltmu
 }

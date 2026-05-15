@@ -412,6 +412,7 @@ impl Cartethyia {
             .collect();
 
         if cfg!(debug_assertions) {
+            #[allow(clippy::needless_bool)]
             if after_self_dangos.is_empty() {
                 true
             } else {
@@ -443,13 +444,7 @@ impl Run for Cartethyia {
         let arrived = self.make_step(track, map, rng);
 
         if !arrived && !self.has_been_last {
-            if cfg!(debug_assertions) {
-                if self.is_last(dangos) {
-                    self.has_been_last = true
-                }
-            } else {
-                self.has_been_last = self.is_last(dangos);
-            }
+            self.has_been_last = self.is_last(dangos);
         }
 
         arrived
