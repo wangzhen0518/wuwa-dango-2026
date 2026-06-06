@@ -12,14 +12,14 @@ use rand::{
     seq::SliceRandom,
 };
 
+mod dangos;
+mod track;
+mod utils;
+
 use crate::{
     dangos::{RefDango, Run, is_budawang},
     track::{Map, TRACK_LEN, Track, init_map, init_track, show_track},
 };
-
-mod dangos;
-mod track;
-mod utils;
 
 #[delegatable_trait_remote]
 trait TryRng {
