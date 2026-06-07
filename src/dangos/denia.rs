@@ -1,0 +1,60 @@
+use std::cell::RefCell;
+
+use rand::Rng;
+
+use crate::{
+    dangos::{Dango, Run, impl_run_helper},
+    track::{Map, Track},
+};
+
+#[derive(Debug, Clone)]
+pub struct Denia {
+    n: usize,
+    last_dice: usize,
+    /// (track position, height)
+    pos: (usize, usize),
+    /// buff 或 debuff 效果
+    extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
+}
+
+impl Denia {
+    pub fn new() -> Self {
+        Self {
+            n: 0,
+            last_dice: 0,
+            pos: (0, 0),
+            extra: 0,
+            arrive_count: 0,
+            target_arrive_count: 1,
+        }
+    }
+}
+
+impl Run for RefCell<Denia> {
+    impl_run_helper!();
+
+    fn reset(&self) {
+        let mut self_mut_inner = self.borrow_mut();
+        self_mut_inner.last_dice = 0;
+        self_mut_inner.extra = 0;
+        self_mut_inner.n = 0;
+    }
+
+    fn step<R>(&self, _dangos: &[Dango], track: &mut Track, map: &Map, rng: &mut R) -> bool
+    where
+        R: Rng + ?Sized,
+    {
+        let n = self.get_n();
+
+        let mut self_mut_inner = self.borrow_mut();
+        if n == self_mut_inner.last_dice {
+            self_mut_inner.extra += 2;
+        }
+        self_mut_inner.last_dice = n;
+        drop(self_mut_inner);
+
+        self.make_step(track, map, rng)
+    }
+}

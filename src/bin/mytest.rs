@@ -8,6 +8,26 @@ struct MyStruct {
     inner: usize,
 }
 
+mod A {
+    pub mod B {
+        macro_rules! my_macro {
+            () => {
+                println!("hello");
+            };
+        }
+
+        pub(in crate::A::B) use my_macro;
+
+        pub mod C {
+            use super::my_macro;
+
+            fn f() {
+                my_macro!();
+            }
+        }
+    }
+}
+
 fn main() {
     let x = RefCell::new(123);
     {
