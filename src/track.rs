@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use unicode_width::UnicodeWidthStr;
 
-use crate::dangos::{RefDango, Run, sort_dangos};
+use crate::dangos::{Dango, Run, sort_dangos};
 
 pub const TRACK_LEN: usize = 32;
 
@@ -26,7 +26,7 @@ impl PointType {
 }
 
 pub type Map = [PointType; TRACK_LEN];
-pub type Point = Vec<RefDango>;
+pub type Point = Vec<Dango>;
 pub type Track = [Point; TRACK_LEN];
 
 /// 初始地图
@@ -44,14 +44,14 @@ pub fn init_map() -> Map {
 }
 
 /// 初始团子赛道
-pub fn init_track(dangos: &[RefDango]) -> Track {
+pub fn init_track(dangos: &[Dango]) -> Track {
     let mut track = [const { vec![] }; TRACK_LEN];
     track[0] = dangos.iter().rev().cloned().collect(); //堆叠顺序与行动顺序相反
     track
 }
 
 #[cfg(debug_assertions)]
-pub fn show_track(round: usize, dangos: &[RefDango], track: &Track, map: &Map) {
+pub fn show_track(round: usize, dangos: &[Dango], track: &Track, map: &Map) {
     const ROW_NUM: usize = 8;
     const COL_NUM: usize = 4;
     const COL_WIDTH: usize = 45;
@@ -67,7 +67,6 @@ pub fn show_track(round: usize, dangos: &[RefDango], track: &Track, map: &Map) {
 
     static DANGO_SEP: &str = " -> ";
     for dango in dangos.iter() {
-        let dango = dango.borrow();
         write!(
             &mut track_state,
             "{}({}){}",
@@ -86,7 +85,6 @@ pub fn show_track(round: usize, dangos: &[RefDango], track: &Track, map: &Map) {
             let point = &track[idx];
             let mut cell = format!("{:2}({}): ", idx, map[idx].shortname());
             for dango in point {
-                let dango = dango.borrow();
                 write!(
                     &mut cell,
                     "{}({}) ",
@@ -109,9 +107,9 @@ pub fn show_track(round: usize, dangos: &[RefDango], track: &Track, map: &Map) {
 }
 
 #[cfg(not(debug_assertions))]
-pub fn show_track(round: usize, dangos: &[RefDango], track: &Track, map: &Map) {}
+pub fn show_track(round: usize, dangos: &[Dango], track: &Track, map: &Map) {}
 
-pub fn sort_by_track(track: &Track) -> Vec<RefDango> {
+pub fn sort_by_track(track: &Track) -> Vec<Dango> {
     let mut dangos: Vec<_> = track
         .iter()
         .rev()

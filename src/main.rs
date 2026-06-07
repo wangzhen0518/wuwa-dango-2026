@@ -1,9 +1,6 @@
 #![allow(unused)]
 
-use std::{
-    fmt::Write,
-    ops::{Deref, DerefMut},
-};
+use std::fmt::Write;
 
 use ambassador::{Delegate, delegatable_trait_remote};
 use rand::{
@@ -17,7 +14,7 @@ mod track;
 mod utils;
 
 use crate::{
-    dangos::{RefDango, Run, is_budawang},
+    dangos::{Dango, Run, is_budawang},
     track::{Map, TRACK_LEN, Track, init_map, init_track, show_track},
 };
 
@@ -54,11 +51,11 @@ pub struct GameState {
     // rng: ThreadRng,
     rng: MyRng,
     map: Map,
-    dangos: Vec<RefDango>,
+    dangos: Vec<Dango>,
     track: Track,
-    before_run_dangos: Vec<RefDango>,
-    after_run_dangos: Vec<RefDango>,
-    budawang: RefDango,
+    before_run_dangos: Vec<Dango>,
+    after_run_dangos: Vec<Dango>,
+    budawang: Dango,
     round: usize,
 }
 
@@ -76,11 +73,11 @@ impl GameState {
     pub fn new(
         rng: MyRng,
         map: Map,
-        dangos: Vec<RefDango>,
+        dangos: Vec<Dango>,
         track: Track,
-        before_run_dangos: Vec<RefDango>,
-        after_run_dangos: Vec<RefDango>,
-        budawang: RefDango,
+        before_run_dangos: Vec<Dango>,
+        after_run_dangos: Vec<Dango>,
+        budawang: Dango,
         round: usize,
     ) -> Self {
         Self {
@@ -125,10 +122,10 @@ fn init_game() -> GameState {
     dangos.shuffle(&mut rng);
     // 根据前进先后顺序更新纵向位置坐标，数组末尾最后一个行动，坐标为 0
     dangos
-        .iter()
+        .iter_mut()
         .rev()
         .enumerate()
-        .for_each(|(idx, dango)| dango.borrow_mut().set_pos((0, idx)));
+        .for_each(|(idx, dango)| dango.set_pos((0, idx)));
     let track = init_track(&dangos);
 
     GameState::new(
@@ -158,8 +155,7 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
     } = first_half_finish_state.unwrap_or_else(init_game);
 
     if !from_beginning {
-        dangos.iter().for_each(|dango| {
-            let mut dango = dango.borrow_mut();
+        dangos.iter_mut().for_each(|dango| {
             dango.reset(); // 重置 dango 的部分属性
             dango.increase_target_arrive_count(); // 增加 dango 需要到达终点的次数
         });
@@ -175,39 +171,39 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
 
         // 布大王第三轮开始行动
         if round == 3 {
-            budawang.borrow_mut().set_pos((TRACK_LEN - 1, 0)); // budawang 的 pos 为上一轮结束时的位置，需要清理
+            budawang.set_pos((TRACK_LEN - 1, 0)); // budawang 的 pos 为上一轮结束时的位置，需要清理
             dangos.push(budawang.clone());
             after_run_dangos.push(budawang.clone());
             track[TRACK_LEN - 1].insert(0, budawang.clone());
             track[TRACK_LEN - 1]
-                .iter()
+                .iter_mut()
                 .enumerate()
                 .skip(1)
-                .for_each(|(idx, dango)| dango.borrow_mut().set_pos((TRACK_LEN - 1, idx)));
+                .for_each(|(idx, dango)| dango.set_pos((TRACK_LEN - 1, idx)));
         }
 
         if round != 1 || !from_beginning {
             dangos.shuffle(&mut rng);
 
             for dango in before_run_dangos.iter() {
-                dango.borrow_mut().before_run(&dangos, &mut track);
+                dango.before_run(&dangos, &mut track);
             }
         }
 
         // 按行动顺序，先全部 roll，再依次 step
-        for dango in dangos.iter() {
-            dango.borrow_mut().roll(&mut rng);
+        for dango in dangos.iter_mut() {
+            dango.roll(&mut rng);
         }
 
         for dango in dangos.iter() {
-            arrived = dango.borrow_mut().step(&dangos, &mut track, &map, &mut rng);
+            arrived = dango.step(&dangos, &mut track, &map, &mut rng);
             if arrived {
                 break 'GameLoop;
             }
         }
 
-        for dango in after_run_dangos.iter() {
-            dango.borrow_mut().after_run(&dangos, &mut track);
+        for dango in after_run_dangos.iter_mut() {
+            dango.after_run(&dangos, &mut track);
         }
         show_track(round, &dangos, &track, &map);
     }
@@ -217,14 +213,13 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
         dangos.retain(|dango| !is_budawang(dango));
         after_run_dangos.retain(|dango| !is_budawang(dango));
 
-        let budawang = budawang.borrow();
         let (x, _) = budawang.get_pos();
         track[x].remove(0);
         // 更新 track[x] 处所有 dango 的坐标
         track[x]
-            .iter()
+            .iter_mut()
             .enumerate()
-            .for_each(|(idx, dango)| dango.borrow_mut().set_pos((x, idx)));
+            .for_each(|(idx, dango)| dango.set_pos((x, idx)));
     }
 
     GameState::new(
@@ -240,10 +235,9 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
 }
 
 #[allow(unused)]
-fn show_rank(dangos: &[RefDango]) {
+fn show_rank(dangos: &[Dango]) {
     let mut rank_info = String::with_capacity(10 * dangos.len());
     for dango in dangos.iter() {
-        let dango = dango.borrow();
         let (x, y) = dango.get_pos();
         write!(&mut rank_info, "{}({}, {}), ", dango.shortname(), x, y).expect("Write failed");
     }
