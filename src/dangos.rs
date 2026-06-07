@@ -381,3 +381,6 @@ pub fn new_bu_da_wang() -> Dango {
 }
 
 pub(in crate::dangos) use {impl_run_for_dango_helper, impl_run_helper};
+
+#[cfg(test)]
+mod tests;
