@@ -59,15 +59,6 @@ pub struct GameState {
     round: usize,
 }
 
-// fn one_round() {
-// 1. 随机决定团子前进顺序
-// 2. 按前进顺序遍历团子
-// 3. roll 点确定前进步数
-// 4. 根据 roll 点和团子位置关系更新团子状态（多走或者少走 n 格）
-// 5. 根据点数和技能前进
-// 6. 根据赛道效果和技能前进
-// }
-
 impl GameState {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -93,15 +84,19 @@ impl GameState {
     }
 }
 
-fn init_game() -> GameState {
+fn gen_rng() -> MyRng {
     let args: Vec<_> = std::env::args().collect();
-    let mut rng = if args.len() > 1 {
+    if args.len() > 1 {
         let seed: u64 = args[1].parse().unwrap();
         mydbg!(seed);
         StdRng::seed_from_u64(seed).into()
     } else {
         rand::rng().into()
-    };
+    }
+}
+
+fn init_game(init_rng: Option<MyRng>) -> GameState {
+    let mut rng = init_rng.unwrap_or_else(gen_rng);
 
     let map = init_map();
 
@@ -141,7 +136,7 @@ fn init_game() -> GameState {
 }
 
 /// @return: (结束时比赛状态, 布大王团子)
-fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
+fn one_game(first_half_finish_state: Option<GameState>, init_rng: Option<MyRng>) -> GameState {
     let from_beginning = first_half_finish_state.is_none(); // 是否从头开始
     let GameState {
         mut rng,
@@ -152,7 +147,7 @@ fn one_game(first_half_finish_state: Option<GameState>) -> GameState {
         mut after_run_dangos,
         budawang,
         round: _,
-    } = first_half_finish_state.unwrap_or_else(init_game);
+    } = first_half_finish_state.unwrap_or_else(|| init_game(init_rng));
 
     if !from_beginning {
         dangos.iter_mut().for_each(|dango| {
