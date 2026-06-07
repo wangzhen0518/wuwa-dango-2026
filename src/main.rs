@@ -97,7 +97,7 @@ fn init_game() -> GameState {
     let args: Vec<_> = std::env::args().collect();
     let mut rng = if args.len() > 1 {
         let seed: u64 = args[1].parse().unwrap();
-        println!("seed = {}", seed);
+        mydbg!(seed);
         StdRng::seed_from_u64(seed).into()
     } else {
         rand::rng().into()
@@ -245,10 +245,8 @@ fn show_rank(dangos: &[Dango]) {
 }
 
 fn main() {
-    if cfg!(debug_assertions) {
-        println!("Start first half game");
-    }
-    let half_state = one_game(None);
+    mydbg!("Start first half game");
+    let half_state = one_game(None, None);
     show_track(
         half_state.round,
         &half_state.dangos,
@@ -259,10 +257,8 @@ fn main() {
     //show_rank(&half_state.dangos);
     //show_rank(&sort_by_track(&half_state.track));
 
-    if cfg!(debug_assertions) {
-        println!("Start second half game");
-    }
-    let mut finish_state = one_game(Some(half_state));
+    mydbg!("Start second half game");
+    let mut finish_state = one_game(Some(half_state), None);
     show_track(
         finish_state.round,
         &finish_state.dangos,
