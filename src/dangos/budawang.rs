@@ -1,10 +1,14 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
-use rand::{Rng, seq::{IndexedRandom, SliceRandom}};
+use rand::{
+    Rng,
+    seq::{IndexedRandom, SliceRandom},
+};
 
 use crate::{
     dangos::{Dango, Run, impl_run_for_dango_helper, impl_run_helper, sort_dangos},
-    track::{Map, PointType, TRACK_LEN, Track}, utils::split_first,
+    track::{Map, PointType, TRACK_LEN, Track},
+    utils::split_first,
 };
 
 #[derive(Debug, Clone)]
@@ -160,4 +164,8 @@ impl Run for RefCell<BuDaWang> {
                 .for_each(|(idx, dango)| dango.set_pos((TRACK_LEN - 1, idx)));
         }
     }
+}
+
+pub fn new_bu_da_wang() -> Dango {
+    Dango::BuDaWang(Rc::new(RefCell::new(BuDaWang::new())))
 }

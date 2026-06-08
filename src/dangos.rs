@@ -67,7 +67,7 @@ pub trait Run {
         1
     }
 
-    fn step<R>(&self, _dangos: &[Dango], track: &mut Track, map: &Map, rng: &mut R) -> bool
+    fn step<R>(&self, dangos: &[Dango], track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
@@ -164,9 +164,9 @@ pub trait Run {
         self.get_arrive_count() == self.get_target_arrive_count() - 1 && target_x == track.len() - 1
     }
 
-    fn before_run(&self, _dangos: &[Dango], _track: &mut Track) {}
+    fn before_run(&self, dangos: &[Dango], track: &mut Track) {}
 
-    fn after_run(&self, _dangos: &[Dango], _track: &mut Track) {}
+    fn after_run(&self, dangos: &[Dango], track: &mut Track) {}
 }
 
 macro_rules! impl_run_helper {
@@ -249,37 +249,37 @@ pub fn sort_dangos(dangos: &mut [Dango]) {
 #[derive(Debug, Clone)]
 // #[delegate(Run)]
 pub enum Dango {
-    Denia(Rc<RefCell<Denia>>),
-    Sigrika(Rc<RefCell<Sigrika>>),
-    Hiyuki(Rc<RefCell<Hiyuki>>),
-    Cartethyia(Rc<RefCell<Cartethyia>>),
-    Phoebe(Rc<RefCell<Phoebe>>),
-    LuukHerssen(Rc<RefCell<LuukHerssen>>),
     BuDaWang(Rc<RefCell<BuDaWang>>),
+    Cartethyia(Rc<RefCell<Cartethyia>>),
+    Denia(Rc<RefCell<Denia>>),
+    Hiyuki(Rc<RefCell<Hiyuki>>),
+    LuukHerssen(Rc<RefCell<LuukHerssen>>),
+    Phoebe(Rc<RefCell<Phoebe>>),
+    Sigrika(Rc<RefCell<Sigrika>>),
 }
 
 impl Dango {
     pub fn fullname(&self) -> &'static str {
         match self {
-            Dango::Denia(_) => "达妮娅",
-            Dango::Sigrika(_) => "西格莉卡",
-            Dango::Hiyuki(_) => "绯雪",
-            Dango::Cartethyia(_) => "卡提希娅",
-            Dango::Phoebe(_) => "菲比",
-            Dango::LuukHerssen(_) => "陆·赫斯",
             Dango::BuDaWang(_) => "布大王",
+            Dango::Cartethyia(_) => "卡提希娅",
+            Dango::Denia(_) => "达妮娅",
+            Dango::Hiyuki(_) => "绯雪",
+            Dango::LuukHerssen(_) => "陆·赫斯",
+            Dango::Phoebe(_) => "菲比",
+            Dango::Sigrika(_) => "西格莉卡",
         }
     }
 
     pub fn shortname(&self) -> &'static str {
         match self {
-            Dango::Denia(_) => "达",
-            Dango::Sigrika(_) => "西",
-            Dango::Hiyuki(_) => "绯",
-            Dango::Cartethyia(_) => "卡",
-            Dango::Phoebe(_) => "菲",
-            Dango::LuukHerssen(_) => "陆",
             Dango::BuDaWang(_) => "布",
+            Dango::Cartethyia(_) => "卡",
+            Dango::Denia(_) => "达",
+            Dango::Hiyuki(_) => "绯",
+            Dango::LuukHerssen(_) => "陆",
+            Dango::Phoebe(_) => "菲",
+            Dango::Sigrika(_) => "西",
         }
     }
 }
@@ -307,13 +307,13 @@ macro_rules! impl_run_for_dango_helper {
             $(where $($where)*)?
             {
                 match self {
-                    Dango::Denia(ref_cell) => ref_cell.$name($($arg),*),
-                    Dango::Sigrika(ref_cell) => ref_cell.$name($($arg),*),
-                    Dango::Hiyuki(ref_cell) => ref_cell.$name($($arg),*),
-                    Dango::Cartethyia(ref_cell) => ref_cell.$name($($arg),*),
-                    Dango::Phoebe(ref_cell) => ref_cell.$name($($arg),*),
-                    Dango::LuukHerssen(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::BuDaWang(ref_cell) => ref_cell.$name($($arg),*),
+                    Dango::Cartethyia(ref_cell) => ref_cell.$name($($arg),*),
+                    Dango::Denia(ref_cell) => ref_cell.$name($($arg),*),
+                    Dango::Hiyuki(ref_cell) => ref_cell.$name($($arg),*),
+                    Dango::LuukHerssen(ref_cell) => ref_cell.$name($($arg),*),
+                    Dango::Phoebe(ref_cell) => ref_cell.$name($($arg),*),
+                    Dango::Sigrika(ref_cell) => ref_cell.$name($($arg),*),
                 }
             }
         )*
@@ -350,34 +350,6 @@ impl Run for Dango {
         before_run(&self, dangos: &[Dango], track: &mut Track);
         after_run(&self, dangos: &[Dango], track: &mut Track);
     );
-}
-
-pub fn new_denia() -> Dango {
-    Dango::Denia(Rc::new(RefCell::new(Denia::new())))
-}
-
-pub fn new_sigrika() -> Dango {
-    Dango::Sigrika(Rc::new(RefCell::new(Sigrika::new())))
-}
-
-pub fn new_hiyuki() -> Dango {
-    Dango::Hiyuki(Rc::new(RefCell::new(Hiyuki::new())))
-}
-
-pub fn new_cartethyia() -> Dango {
-    Dango::Cartethyia(Rc::new(RefCell::new(Cartethyia::new())))
-}
-
-pub fn new_phoebe() -> Dango {
-    Dango::Phoebe(Rc::new(RefCell::new(Phoebe::new())))
-}
-
-pub fn new_luuk_herssen() -> Dango {
-    Dango::LuukHerssen(Rc::new(RefCell::new(LuukHerssen::new())))
-}
-
-pub fn new_bu_da_wang() -> Dango {
-    Dango::BuDaWang(Rc::new(RefCell::new(BuDaWang::new())))
 }
 
 pub(in crate::dangos) use {impl_run_for_dango_helper, impl_run_helper};

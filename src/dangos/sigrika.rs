@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use rand::Rng;
 
@@ -57,4 +57,8 @@ impl Run for RefCell<Sigrika> {
             });
         }
     }
+}
+
+pub fn new_sigrika() -> Dango {
+    Dango::Sigrika(Rc::new(RefCell::new(Sigrika::new())))
 }

@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use rand::Rng;
 
@@ -41,3 +41,8 @@ impl Run for RefCell<LuukHerssen> {
         2
     }
 }
+
+pub fn new_luuk_herssen() -> Dango {
+    Dango::LuukHerssen(Rc::new(RefCell::new(LuukHerssen::new())))
+}
+

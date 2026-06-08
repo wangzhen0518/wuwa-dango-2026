@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use rand::{Rng, RngExt};
 
@@ -7,6 +7,7 @@ use crate::{
     track::{Map, Track},
 };
 
+const EXTRA_ADVANCE_PROB: f64 = 0.6;
 #[derive(Debug, Clone)]
 pub struct Cartethyia {
     n: usize,
@@ -21,8 +22,6 @@ pub struct Cartethyia {
 }
 
 impl Cartethyia {
-    const EXTRA_ADVANCE_PROB: f64 = 0.6;
-
     pub fn new() -> Self {
         Self {
             n: 0,
@@ -77,7 +76,7 @@ impl Run for RefCell<Cartethyia> {
         R: Rng + ?Sized,
     {
         let mut self_mut_inner = self.borrow_mut();
-        if self_mut_inner.has_been_last && rng.random_bool(Cartethyia::EXTRA_ADVANCE_PROB) {
+        if self_mut_inner.has_been_last && rng.random_bool(EXTRA_ADVANCE_PROB) {
             self_mut_inner.extra += 2;
         }
         drop(self_mut_inner);
@@ -91,4 +90,8 @@ impl Run for RefCell<Cartethyia> {
 
         arrived
     }
+}
+
+pub fn new_cartethyia() -> Dango {
+    Dango::Cartethyia(Rc::new(RefCell::new(Cartethyia::new())))
 }

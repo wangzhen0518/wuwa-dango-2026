@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use rand::Rng;
 
@@ -57,4 +57,8 @@ impl Run for RefCell<Denia> {
 
         self.make_step(track, map, rng)
     }
+}
+
+pub fn new_denia() -> Dango {
+    Dango::Denia(Rc::new(RefCell::new(Denia::new())))
 }

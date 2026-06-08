@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use rand::{Rng, RngExt};
 
@@ -6,6 +6,8 @@ use crate::{
     dangos::{Dango, Run, impl_run_helper},
     track::{Map, Track},
 };
+
+const EXTRA_ADVANCE_PROB: f64 = 0.5;
 
 #[derive(Debug, Clone)]
 pub struct Phoebe {
@@ -19,8 +21,6 @@ pub struct Phoebe {
 }
 
 impl Phoebe {
-    const EXTRA_ADVANCE_PROB: f64 = 0.5;
-
     pub fn new() -> Self {
         Self {
             n: 0,
@@ -39,10 +39,14 @@ impl Run for RefCell<Phoebe> {
     where
         R: Rng + ?Sized,
     {
-        if rng.random_bool(Phoebe::EXTRA_ADVANCE_PROB) {
+        if rng.random_bool(EXTRA_ADVANCE_PROB) {
             self.borrow_mut().extra += 1;
         }
 
         self.make_step(track, map, rng)
     }
+}
+
+pub fn new_phoebe() -> Dango {
+    Dango::Phoebe(Rc::new(RefCell::new(Phoebe::new())))
 }

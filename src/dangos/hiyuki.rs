@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use rand::Rng;
 
@@ -72,4 +72,8 @@ impl Run for RefCell<Hiyuki> {
 
         arrived
     }
+}
+
+pub fn new_hiyuki() -> Dango {
+    Dango::Hiyuki(Rc::new(RefCell::new(Hiyuki::new())))
 }
