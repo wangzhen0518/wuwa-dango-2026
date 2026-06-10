@@ -56,3 +56,15 @@ pub fn new_luukherssen(
 pub fn default_luukherssen() -> Rc<RefCell<LuukHerssen>> {
     Rc::new(RefCell::new(LuukHerssen::default()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_luukherssen_accelerate_decelerate() {
+        let d = default_luukherssen();
+        assert_eq!(d.accelerate_step(), 4);
+        assert_eq!(d.decelerate_step(), 2);
+    }
+}

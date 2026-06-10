@@ -98,3 +98,44 @@ pub fn new_hiyuki(
 pub fn default_hiyuki() -> Rc<RefCell<Hiyuki>> {
     Rc::new(RefCell::new(Hiyuki::default()))
 }
+
+#[cfg(test)]
+mod tests {
+    use rand::{SeedableRng, rngs::StdRng};
+
+    use crate::dangos::tests::*;
+
+    use super::*;
+
+    #[test]
+    fn test_hiyuki_meet_budawang_bonus() {
+        const N: usize = 2;
+        const BUDAWANG_POS: usize = 5;
+        const HIYUKI_POS: usize = 4;
+
+        let mut rng = StdRng::seed_from_u64(0);
+
+        let map = dummy_map();
+        let mut track = dummy_track_no_dangos();
+
+        let budawang = Dango::default_budawang();
+        let hiyuki = default_hiyuki();
+        let dangos = [budawang.clone(), hiyuki.clone().into()];
+
+        budawang.set_pos((5, 0));
+        hiyuki.set_pos((4, 0));
+
+        track[BUDAWANG_POS].push(budawang.clone());
+        track[HIYUKI_POS].push(hiyuki.clone().into());
+
+        hiyuki.set_n(N);
+        hiyuki.step(&dangos, &mut track, &map, &mut rng);
+        assert!(hiyuki.borrow().meeted, "Should have meeted BuDaWang");
+
+        hiyuki.set_n(N);
+        hiyuki.step(&dangos, &mut track, &map, &mut rng);
+
+        let (x, _) = hiyuki.get_pos();
+        assert_eq!(x, HIYUKI_POS + N * 2 + 1);
+    }
+}

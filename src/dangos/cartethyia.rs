@@ -107,3 +107,70 @@ pub fn new_cartethyia(
 pub fn default_cartethyia() -> Rc<RefCell<Cartethyia>> {
     Rc::new(RefCell::new(Cartethyia::default()))
 }
+
+#[cfg(test)]
+mod tests {
+    use rand::{SeedableRng, rngs::StdRng};
+
+    use crate::dangos::tests::*;
+
+    use super::*;
+
+    #[test]
+    fn test_is_last_true_when_behind_all() {
+        let cartethyia = default_cartethyia();
+        let denia = Dango::default_denia();
+        let hiyuki = Dango::default_hiyuki();
+        hiyuki.set_pos((2, 0));
+        denia.set_pos((1, 0));
+        cartethyia.set_pos((0, 0));
+        let dangos = [denia, hiyuki, cartethyia.clone().into()];
+
+        assert!(
+            cartethyia.borrow().is_last(&dangos),
+            "should be last when behind all"
+        );
+    }
+
+    #[test]
+    fn test_is_last_false_when_not_last() {
+        let cartethyia = default_cartethyia();
+        let denia = Dango::default_denia();
+        let hiyuki = Dango::default_hiyuki();
+        cartethyia.set_pos((2, 0));
+        denia.set_pos((1, 0));
+        hiyuki.set_pos((0, 0));
+        let dangos = [denia, hiyuki, cartethyia.clone().into()];
+
+        assert!(!cartethyia.borrow().is_last(&dangos), "should not be last");
+    }
+
+    #[test]
+    fn test_flag_gets_set_when_last() {
+        let mut rng = StdRng::seed_from_u64(42);
+
+        let map = dummy_map();
+        let mut track = dummy_track_no_dangos();
+
+        let cartethyia = default_cartethyia();
+        let denia = Dango::default_denia();
+        let hiyuki = Dango::default_hiyuki();
+        let dangos = [denia.clone(), hiyuki.clone(), cartethyia.clone().into()];
+
+        hiyuki.set_pos((3, 0));
+        denia.set_pos((2, 0));
+        cartethyia.set_pos((0, 0));
+
+        track[3].push(hiyuki.clone());
+        track[2].push(denia.clone());
+        track[0].push(cartethyia.clone().into());
+
+        cartethyia.set_n(1);
+        cartethyia.step(&dangos, &mut track, &map, &mut rng);
+
+        assert!(
+            cartethyia.borrow().has_been_last,
+            "flag should be set after being last"
+        );
+    }
+}

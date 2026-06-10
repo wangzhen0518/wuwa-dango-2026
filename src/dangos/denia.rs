@@ -80,3 +80,42 @@ pub fn new_denia(
 pub fn default_denia() -> Rc<RefCell<Denia>> {
     Rc::new(RefCell::new(Denia::default()))
 }
+
+#[cfg(test)]
+mod tests {
+    use rand::rngs::StdRng;
+
+    use crate::dangos::tests::*;
+
+    use super::*;
+
+    #[test]
+    fn test_denia_consecutive_dice_bonus() {
+        use rand::SeedableRng;
+
+        let mut rng = StdRng::seed_from_u64(0);
+
+        let map = dummy_map();
+        let mut track = dummy_track_no_dangos();
+
+        let denia = default_denia();
+        let dangos = [denia.clone().into()];
+
+        denia.set_pos((0, 0));
+        track[0].push(denia.clone().into());
+
+        // 第一次 step 设定 last_dice
+        let target_n = 2;
+        denia.set_n(target_n);
+        denia.step(&dangos, &mut track, &map, &mut rng);
+
+        // 手动再 roll 一次
+        denia.set_n(target_n);
+        denia.step(&dangos, &mut track, &map, &mut rng);
+
+        // Denia::step: if n == last_dice, extra += 2
+        let (x, _) = denia.get_pos();
+        assert_eq!(x, target_n + target_n + 2);
+        assert_eq!(denia.get_extra(), 0);
+    }
+}

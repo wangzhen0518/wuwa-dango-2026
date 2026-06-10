@@ -76,3 +76,47 @@ pub fn new_sigrika(
 pub fn default_sigrika() -> Rc<RefCell<Sigrika>> {
     Rc::new(RefCell::new(Sigrika::default()))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::dangos::tests::*;
+
+    use super::*;
+
+    #[test]
+    fn test_sigrika_debuffs_top_two_ahead() {
+        const DENIA_POS: usize = 10;
+        const HIYUKI_POS: usize = 7;
+        const SIGRIKA_POS: usize = 3;
+        const PHOEBE_POS: usize = 1;
+
+        let mut track = dummy_track_no_dangos();
+
+        let sigrika = default_sigrika();
+        let denia = Dango::default_denia();
+        let hiyuki = Dango::default_hiyuki();
+        let phoebe = Dango::default_phoebe();
+        let dangos = [
+            sigrika.clone().into(),
+            denia.clone(),
+            hiyuki.clone(),
+            phoebe.clone(),
+        ];
+
+        denia.set_pos((DENIA_POS, 0));
+        hiyuki.set_pos((HIYUKI_POS, 0));
+        sigrika.set_pos((SIGRIKA_POS, 0));
+        phoebe.set_pos((PHOEBE_POS, 0));
+
+        track[DENIA_POS].push(denia.clone());
+        track[HIYUKI_POS].push(hiyuki.clone());
+        track[SIGRIKA_POS].push(sigrika.clone().into());
+        track[PHOEBE_POS].push(phoebe.clone());
+
+        sigrika.before_run(&dangos, &mut track);
+
+        assert_eq!(denia.get_extra(), -1, "top 1 ahead should be debuffed");
+        assert_eq!(hiyuki.get_extra(), -1, "top 2 ahead should be debuffed");
+        assert_eq!(phoebe.get_extra(), 0, "behind dango should not be debuffed");
+    }
+}
