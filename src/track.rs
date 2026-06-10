@@ -109,6 +109,7 @@ pub fn show_track(round: usize, dangos: &[Dango], track: &Track, map: &Map) {
 #[cfg(not(debug_assertions))]
 pub fn show_track(round: usize, dangos: &[Dango], track: &Track, map: &Map) {}
 
+#[allow(dead_code)]
 pub fn sort_by_track(track: &Track) -> Vec<Dango> {
     let mut dangos: Vec<_> = track
         .iter()
