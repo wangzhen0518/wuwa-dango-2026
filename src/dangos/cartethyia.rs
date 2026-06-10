@@ -8,31 +8,21 @@ use crate::{
 };
 
 const EXTRA_ADVANCE_PROB: f64 = 0.6;
+
 #[derive(Debug, Clone)]
 pub struct Cartethyia {
     n: usize,
-    /// 是否成为过最后一名
-    has_been_last: bool,
     /// (track position, height)
     pos: (usize, usize),
     /// buff 或 debuff 效果
     extra: isize,
     arrive_count: usize,
     target_arrive_count: usize,
+    /// 是否成为过最后一名
+    has_been_last: bool,
 }
 
 impl Cartethyia {
-    pub fn new() -> Self {
-        Self {
-            n: 0,
-            has_been_last: false,
-            pos: (0, 0),
-            extra: 0,
-            arrive_count: 0,
-            target_arrive_count: 1,
-        }
-    }
-
     fn is_last(&self, dangos: &[Dango]) -> bool {
         // 收集除自己和布大王以外、落后于自己的团子
         let after_self_dangos: Vec<_> = dangos
@@ -48,15 +38,19 @@ impl Cartethyia {
             .cloned()
             .collect();
 
-        if cfg!(debug_assertions) {
-            #[allow(clippy::needless_bool)]
-            if after_self_dangos.is_empty() {
-                true
-            } else {
-                false
-            }
-        } else {
-            after_self_dangos.is_empty()
+        after_self_dangos.is_empty()
+    }
+}
+
+impl Default for Cartethyia {
+    fn default() -> Self {
+        Self {
+            n: 0,
+            has_been_last: false,
+            pos: (0, 0),
+            extra: 0,
+            arrive_count: 0,
+            target_arrive_count: 1,
         }
     }
 }
@@ -92,6 +86,24 @@ impl Run for RefCell<Cartethyia> {
     }
 }
 
-pub fn new_cartethyia() -> Dango {
-    Dango::Cartethyia(Rc::new(RefCell::new(Cartethyia::new())))
+pub fn new_cartethyia(
+    n: usize,
+    pos: (usize, usize),
+    extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
+    has_been_last: bool,
+) -> Rc<RefCell<Cartethyia>> {
+    Rc::new(RefCell::new(Cartethyia {
+        n,
+        pos,
+        extra,
+        arrive_count,
+        target_arrive_count,
+        has_been_last,
+    }))
+}
+
+pub fn default_cartethyia() -> Rc<RefCell<Cartethyia>> {
+    Rc::new(RefCell::new(Cartethyia::default()))
 }

@@ -1,23 +1,20 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt::Write, rc::Rc};
 
-use ambassador::{Delegate, delegatable_trait};
+// use ambassador::delegatable_trait;
 use rand::{
-    Rng, RngExt,
+    Rng,
     seq::{IndexedRandom, SliceRandom},
 };
 
-use crate::{
-    track::{Map, Point, PointType, TRACK_LEN, Track},
-    utils::split_first,
-};
+use crate::track::{Map, Point, PointType, Track};
 
-mod budawang;
-mod cartethyia;
-mod denia;
-mod hiyuki;
-mod luukherssen;
-mod phoebe;
-mod sigrika;
+pub mod budawang;
+pub mod cartethyia;
+pub mod denia;
+pub mod hiyuki;
+pub mod luukherssen;
+pub mod phoebe;
+pub mod sigrika;
 
 use budawang::BuDaWang;
 use cartethyia::Cartethyia;
@@ -29,7 +26,7 @@ use sigrika::Sigrika;
 
 static COMMON_DICE: [usize; 6] = [1, 1, 2, 2, 3, 3];
 
-#[delegatable_trait]
+// #[delegatable_trait]
 pub trait Run {
     fn reset(&self) {
         self.set_extra(0);
@@ -67,6 +64,7 @@ pub trait Run {
         1
     }
 
+    #[allow(unused_variables)]
     fn step<R>(&self, dangos: &[Dango], track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
@@ -97,13 +95,14 @@ pub trait Run {
         // 越过终点
         if target_x >= track.len() {
             self.increase_arrive_count();
-            tail[1..]
+            tail[1..] //TODO 为什么从 1 开始索引？
                 .iter_mut()
                 .for_each(|dango| dango.increase_arrive_count());
             target_x %= track.len();
         }
 
         // 将尾部元素追加到目标行
+        #[allow(unused_mut)]
         let mut target_y = track[target_x].len();
         track[target_x].append(&mut tail);
 
@@ -123,11 +122,11 @@ pub trait Run {
                 }
                 if new_x > target_x {
                     let (left, right) = track.split_at_mut(new_x);
-                    target_y += right[0].len();
+                    // target_y += right[0].len();
                     right[0].append(&mut left[target_x]);
                 } else if new_x < target_x {
                     let (left, right) = track.split_at_mut(target_x);
-                    target_y += left[new_x].len();
+                    // target_y += left[new_x].len();
                     left[new_x].append(&mut right[0]);
                 }
                 target_x = new_x;
@@ -137,7 +136,7 @@ pub trait Run {
                 let new_x = target_x.saturating_sub(dec);
                 let (left, right) = track.split_at_mut(target_x);
 
-                target_y += left[new_x].len();
+                // target_y += left[new_x].len();
                 left[new_x].append(&mut right[0]);
                 target_x = new_x
             }
@@ -164,8 +163,10 @@ pub trait Run {
         self.get_arrive_count() == self.get_target_arrive_count() - 1 && target_x == track.len() - 1
     }
 
+    #[allow(unused_variables)]
     fn before_run(&self, dangos: &[Dango], track: &mut Track) {}
 
+    #[allow(unused_variables)]
     fn after_run(&self, dangos: &[Dango], track: &mut Track) {}
 }
 
@@ -213,38 +214,7 @@ macro_rules! impl_run_helper {
     };
 }
 
-pub fn is_budawang(dango: &Dango) -> bool {
-    matches!(dango, Dango::BuDaWang(_))
-}
-
-fn has_budawang(range: &[Point]) -> bool {
-    range
-        .iter()
-        .filter_map(|point| {
-            if point.is_empty() {
-                None
-            } else {
-                Some(&point[0])
-            }
-        })
-        .any(is_budawang)
-}
-
-fn no_dango(range: &[Point]) -> bool {
-    range.iter().rev().all(|point| {
-        point.is_empty() // 团子所在位置的后面都没有其他团子
-        || (point.len() == 1 && is_budawang(&point[0])) // 或者只有布大王
-    })
-}
-
-pub fn sort_dangos(dangos: &mut [Dango]) {
-    dangos.sort_by(|a, b| {
-        a.get_arrive_count()
-            .cmp(&b.get_arrive_count())
-            .then(a.get_pos().cmp(&b.get_pos()))
-    });
-    dangos.reverse();
-}
+pub(in crate::dangos) use impl_run_helper;
 
 #[derive(Debug, Clone)]
 // #[delegate(Run)]
@@ -259,6 +229,7 @@ pub enum Dango {
 }
 
 impl Dango {
+    #[allow(dead_code)]
     pub fn fullname(&self) -> &'static str {
         match self {
             Dango::BuDaWang(_) => "布大王",
@@ -282,7 +253,170 @@ impl Dango {
             Dango::Sigrika(_) => "西",
         }
     }
+
+    pub fn default_budawang() -> Dango {
+        Dango::BuDaWang(budawang::default_budawang())
+    }
+
+    pub fn default_cartethyia() -> Dango {
+        Dango::Cartethyia(cartethyia::default_cartethyia())
+    }
+
+    pub fn default_denia() -> Dango {
+        Dango::Denia(denia::default_denia())
+    }
+
+    pub fn default_hiyuki() -> Dango {
+        Dango::Hiyuki(hiyuki::default_hiyuki())
+    }
+
+    pub fn default_luukherssen() -> Dango {
+        Dango::LuukHerssen(luukherssen::default_luukherssen())
+    }
+
+    pub fn default_phoebe() -> Dango {
+        Dango::Phoebe(phoebe::default_phoebe())
+    }
+
+    pub fn default_sigrika() -> Dango {
+        Dango::Sigrika(sigrika::default_sigrika())
+    }
+
+    #[allow(dead_code)]
+    pub fn new_budawang(n: usize, pos: (usize, usize)) -> Dango {
+        Dango::BuDaWang(budawang::new_budawang(n, pos))
+    }
+
+    #[allow(dead_code)]
+    pub fn new_cartethyia(
+        n: usize,
+        pos: (usize, usize),
+        extra: isize,
+        arrive_count: usize,
+        target_arrive_count: usize,
+        has_been_last: bool,
+    ) -> Dango {
+        Dango::Cartethyia(cartethyia::new_cartethyia(
+            n,
+            pos,
+            extra,
+            arrive_count,
+            target_arrive_count,
+            has_been_last,
+        ))
+    }
+
+    #[allow(dead_code)]
+    pub fn new_denia(
+        n: usize,
+        pos: (usize, usize),
+        extra: isize,
+        arrive_count: usize,
+        target_arrive_count: usize,
+        last_dice: usize,
+    ) -> Dango {
+        Dango::Denia(denia::new_denia(
+            n,
+            pos,
+            extra,
+            arrive_count,
+            target_arrive_count,
+            last_dice,
+        ))
+    }
+
+    #[allow(dead_code)]
+    pub fn new_hiyuki(
+        n: usize,
+        pos: (usize, usize),
+        extra: isize,
+        arrive_count: usize,
+        target_arrive_count: usize,
+        meeted: bool,
+    ) -> Dango {
+        Dango::Hiyuki(hiyuki::new_hiyuki(
+            n,
+            pos,
+            extra,
+            arrive_count,
+            target_arrive_count,
+            meeted,
+        ))
+    }
+
+    #[allow(dead_code)]
+    pub fn new_luukherssen(
+        n: usize,
+        pos: (usize, usize),
+        extra: isize,
+        arrive_count: usize,
+        target_arrive_count: usize,
+    ) -> Dango {
+        Dango::LuukHerssen(luukherssen::new_luukherssen(
+            n,
+            pos,
+            extra,
+            arrive_count,
+            target_arrive_count,
+        ))
+    }
+
+    #[allow(dead_code)]
+    pub fn new_phoebe(
+        n: usize,
+        pos: (usize, usize),
+        extra: isize,
+        arrive_count: usize,
+        target_arrive_count: usize,
+    ) -> Dango {
+        Dango::Phoebe(phoebe::new_phoebe(
+            n,
+            pos,
+            extra,
+            arrive_count,
+            target_arrive_count,
+        ))
+    }
+
+    #[allow(dead_code)]
+    pub fn new_sigrika(
+        n: usize,
+        pos: (usize, usize),
+        extra: isize,
+        arrive_count: usize,
+        target_arrive_count: usize,
+    ) -> Dango {
+        Dango::Sigrika(sigrika::new_sigrika(
+            n,
+            pos,
+            extra,
+            arrive_count,
+            target_arrive_count,
+        ))
+    }
 }
+
+macro_rules! from_variant_helper {
+    ($($ty:ident),*) => {
+        $(
+            impl From<Rc<RefCell<$ty>>> for Dango {
+                fn from(value: Rc<RefCell<$ty>>) -> Dango {
+                    Dango::$ty(value)
+                }
+            }
+        )*
+    };
+}
+
+from_variant_helper!(
+    BuDaWang,
+    Cartethyia,
+    Denia,
+    Hiyuki,
+    LuukHerssen,
+    Phoebe,
+    Sigrika
+);
 
 macro_rules! impl_run_for_dango_helper {
     (
@@ -352,7 +486,73 @@ impl Run for Dango {
     );
 }
 
-pub(in crate::dangos) use {impl_run_for_dango_helper, impl_run_helper};
+impl PartialEq for Dango {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_arrive_count() == other.get_arrive_count() && self.get_pos() == other.get_pos()
+    }
+}
+
+impl Eq for Dango {}
+
+impl PartialOrd for Dango {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Dango {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.get_arrive_count()
+            .cmp(&other.get_arrive_count())
+            .then(self.get_pos().cmp(&other.get_pos()))
+    }
+}
+
+pub fn is_budawang(dango: &Dango) -> bool {
+    matches!(dango, Dango::BuDaWang(_))
+}
+
+fn has_budawang(range: &[Point]) -> bool {
+    range
+        .iter()
+        .filter_map(|point| {
+            if point.is_empty() {
+                None
+            } else {
+                Some(&point[0])
+            }
+        })
+        .any(is_budawang)
+}
+
+// fn no_dango(range: &[Point]) -> bool {
+//     range.iter().rev().all(|point| {
+//         point.is_empty() // 团子所在位置的后面都没有其他团子
+//         || (point.len() == 1 && is_budawang(&point[0])) // 或者只有布大王
+//     })
+// }
+
+pub fn sort_dangos(dangos: &mut [Dango]) {
+    dangos.sort_by(|a, b| b.cmp(a));
+}
+
+#[allow(unused)]
+pub fn show_dangos(dangos: &[Dango]) {
+    let mut rank_info = String::with_capacity(10 * dangos.len());
+    for dango in dangos.iter() {
+        let (x, y) = dango.get_pos();
+        write!(
+            &mut rank_info,
+            "{}({}, {})({}), ",
+            dango.shortname(),
+            x,
+            y,
+            dango.get_arrive_count()
+        )
+        .expect("Write failed");
+    }
+    println!("{}", rank_info);
+}
 
 #[cfg(test)]
 mod tests;

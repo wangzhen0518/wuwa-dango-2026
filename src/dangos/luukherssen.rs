@@ -1,11 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use rand::Rng;
-
-use crate::{
-    dangos::{Dango, Run, impl_run_helper},
-    track::{Map, Track},
-};
+use crate::dangos::{Run, impl_run_helper};
 
 #[derive(Debug, Clone)]
 pub struct LuukHerssen {
@@ -18,8 +13,8 @@ pub struct LuukHerssen {
     target_arrive_count: usize,
 }
 
-impl LuukHerssen {
-    pub fn new() -> Self {
+impl Default for LuukHerssen {
+    fn default() -> Self {
         Self {
             n: 0,
             pos: (0, 0),
@@ -42,7 +37,22 @@ impl Run for RefCell<LuukHerssen> {
     }
 }
 
-pub fn new_luuk_herssen() -> Dango {
-    Dango::LuukHerssen(Rc::new(RefCell::new(LuukHerssen::new())))
+pub fn new_luukherssen(
+    n: usize,
+    pos: (usize, usize),
+    extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
+) -> Rc<RefCell<LuukHerssen>> {
+    Rc::new(RefCell::new(LuukHerssen {
+        n,
+        pos,
+        extra,
+        arrive_count,
+        target_arrive_count,
+    }))
 }
 
+pub fn default_luukherssen() -> Rc<RefCell<LuukHerssen>> {
+    Rc::new(RefCell::new(LuukHerssen::default()))
+}

@@ -1,10 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use rand::Rng;
-
 use crate::{
     dangos::{Dango, Run, impl_run_helper, sort_dangos},
-    track::{Map, Track},
+    track::Track,
 };
 
 #[derive(Debug, Clone)]
@@ -18,8 +16,8 @@ pub struct Sigrika {
     target_arrive_count: usize,
 }
 
-impl Sigrika {
-    pub fn new() -> Self {
+impl Default for Sigrika {
+    fn default() -> Self {
         Self {
             n: 0,
             pos: (0, 0),
@@ -33,7 +31,7 @@ impl Sigrika {
 impl Run for RefCell<Sigrika> {
     impl_run_helper!();
 
-    fn before_run(&self, dangos: &[Dango], track: &mut Track) {
+    fn before_run(&self, dangos: &[Dango], _track: &mut Track) {
         let self_inner = self.borrow();
         // 收集除布大王外，领先于自己的团子
         let mut ahead_dangos: Vec<_> = dangos
@@ -59,6 +57,22 @@ impl Run for RefCell<Sigrika> {
     }
 }
 
-pub fn new_sigrika() -> Dango {
-    Dango::Sigrika(Rc::new(RefCell::new(Sigrika::new())))
+pub fn new_sigrika(
+    n: usize,
+    pos: (usize, usize),
+    extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
+) -> Rc<RefCell<Sigrika>> {
+    Rc::new(RefCell::new(Sigrika {
+        n,
+        pos,
+        extra,
+        arrive_count,
+        target_arrive_count,
+    }))
+}
+
+pub fn default_sigrika() -> Rc<RefCell<Sigrika>> {
+    Rc::new(RefCell::new(Sigrika::default()))
 }

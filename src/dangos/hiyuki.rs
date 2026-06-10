@@ -10,18 +10,19 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Hiyuki {
     n: usize,
-    /// 是否遇到过布大王
-    meeted: bool,
+
     /// (track position, height)
     pos: (usize, usize),
     /// buff 或 debuff 效果
     extra: isize,
     arrive_count: usize,
     target_arrive_count: usize,
+    /// 是否遇到过布大王
+    meeted: bool,
 }
 
-impl Hiyuki {
-    pub fn new() -> Self {
+impl Default for Hiyuki {
+    fn default() -> Self {
         Self {
             n: 0,
             meeted: false,
@@ -43,7 +44,7 @@ impl Run for RefCell<Hiyuki> {
         self_inner.n = 0;
     }
 
-    fn step<R>(&self, dangos: &[Dango], track: &mut Track, map: &Map, rng: &mut R) -> bool
+    fn step<R>(&self, _dangos: &[Dango], track: &mut Track, map: &Map, rng: &mut R) -> bool
     where
         R: Rng + ?Sized,
     {
@@ -51,7 +52,9 @@ impl Run for RefCell<Hiyuki> {
 
         // 绯雪上轮行动后至此轮行动前，被布大王经过
         let mut self_mut_inner = self.borrow_mut();
-        self_mut_inner.meeted = !self_mut_inner.meeted && is_budawang(&track[old_x][0]);
+        if !self_mut_inner.meeted && is_budawang(&track[old_x][0]) {
+            self_mut_inner.meeted = true;
+        }
         self_mut_inner.extra = self_mut_inner.meeted as isize;
         drop(self_mut_inner); // self.make_step 中会进行 borrow，需要事先释放 borrow
 
@@ -74,6 +77,24 @@ impl Run for RefCell<Hiyuki> {
     }
 }
 
-pub fn new_hiyuki() -> Dango {
-    Dango::Hiyuki(Rc::new(RefCell::new(Hiyuki::new())))
+pub fn new_hiyuki(
+    n: usize,
+    pos: (usize, usize),
+    extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
+    meeted: bool,
+) -> Rc<RefCell<Hiyuki>> {
+    Rc::new(RefCell::new(Hiyuki {
+        n,
+        pos,
+        extra,
+        arrive_count,
+        target_arrive_count,
+        meeted,
+    }))
+}
+
+pub fn default_hiyuki() -> Rc<RefCell<Hiyuki>> {
+    Rc::new(RefCell::new(Hiyuki::default()))
 }

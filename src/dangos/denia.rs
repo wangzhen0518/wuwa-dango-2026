@@ -10,17 +10,17 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Denia {
     n: usize,
-    last_dice: usize,
     /// (track position, height)
     pos: (usize, usize),
     /// buff 或 debuff 效果
     extra: isize,
     arrive_count: usize,
     target_arrive_count: usize,
+    last_dice: usize,
 }
 
-impl Denia {
-    pub fn new() -> Self {
+impl Default for Denia {
+    fn default() -> Self {
         Self {
             n: 0,
             last_dice: 0,
@@ -59,6 +59,24 @@ impl Run for RefCell<Denia> {
     }
 }
 
-pub fn new_denia() -> Dango {
-    Dango::Denia(Rc::new(RefCell::new(Denia::new())))
+pub fn new_denia(
+    n: usize,
+    pos: (usize, usize),
+    extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
+    last_dice: usize,
+) -> Rc<RefCell<Denia>> {
+    Rc::new(RefCell::new(Denia {
+        n,
+        pos,
+        extra,
+        arrive_count,
+        target_arrive_count,
+        last_dice,
+    }))
+}
+
+pub fn default_denia() -> Rc<RefCell<Denia>> {
+    Rc::new(RefCell::new(Denia::default()))
 }

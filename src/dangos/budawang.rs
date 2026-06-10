@@ -6,10 +6,12 @@ use rand::{
 };
 
 use crate::{
-    dangos::{Dango, Run, impl_run_for_dango_helper, impl_run_helper, sort_dangos},
+    dangos::{Dango, Run, sort_dangos},
     track::{Map, PointType, TRACK_LEN, Track},
     utils::split_first,
 };
+
+static BUDAWANG_DICE: [usize; 6] = [1, 2, 3, 4, 5, 6];
 
 #[derive(Debug, Clone)]
 pub struct BuDaWang {
@@ -18,15 +20,6 @@ pub struct BuDaWang {
 }
 
 impl BuDaWang {
-    const BUDAWANG_DICE: [usize; 6] = [1, 2, 3, 4, 5, 6];
-
-    pub fn new() -> Self {
-        Self {
-            n: 0,
-            pos: (TRACK_LEN - 1, 0),
-        }
-    }
-
     fn leave_last_dango(&self, dangos: &[Dango]) -> bool {
         let (x, _) = self.pos;
 
@@ -46,12 +39,21 @@ impl BuDaWang {
     }
 }
 
+impl Default for BuDaWang {
+    fn default() -> Self {
+        Self {
+            n: 0,
+            pos: (TRACK_LEN - 1, 0),
+        }
+    }
+}
+
 impl Run for RefCell<BuDaWang> {
     fn roll<R>(&self, rng: &mut R)
     where
         R: Rng + ?Sized,
     {
-        let n = *BuDaWang::BUDAWANG_DICE.choose(rng).expect("Roll failed");
+        let n = *BUDAWANG_DICE.choose(rng).expect("Roll failed");
         self.borrow_mut().n = n;
     }
 
@@ -166,6 +168,10 @@ impl Run for RefCell<BuDaWang> {
     }
 }
 
-pub fn new_bu_da_wang() -> Dango {
-    Dango::BuDaWang(Rc::new(RefCell::new(BuDaWang::new())))
+pub fn new_budawang(n: usize, pos: (usize, usize)) -> Rc<RefCell<BuDaWang>> {
+    Rc::new(RefCell::new(BuDaWang { n, pos }))
+}
+
+pub fn default_budawang() -> Rc<RefCell<BuDaWang>> {
+    Rc::new(RefCell::new(BuDaWang::default()))
 }

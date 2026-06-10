@@ -20,8 +20,8 @@ pub struct Phoebe {
     target_arrive_count: usize,
 }
 
-impl Phoebe {
-    pub fn new() -> Self {
+impl Default for Phoebe {
+    fn default() -> Self {
         Self {
             n: 0,
             pos: (0, 0),
@@ -47,6 +47,22 @@ impl Run for RefCell<Phoebe> {
     }
 }
 
-pub fn new_phoebe() -> Dango {
-    Dango::Phoebe(Rc::new(RefCell::new(Phoebe::new())))
+pub fn new_phoebe(
+    n: usize,
+    pos: (usize, usize),
+    extra: isize,
+    arrive_count: usize,
+    target_arrive_count: usize,
+) -> Rc<RefCell<Phoebe>> {
+    Rc::new(RefCell::new(Phoebe {
+        n,
+        pos,
+        extra,
+        arrive_count,
+        target_arrive_count,
+    }))
+}
+
+pub fn default_phoebe() -> Rc<RefCell<Phoebe>> {
+    Rc::new(RefCell::new(Phoebe::default()))
 }
