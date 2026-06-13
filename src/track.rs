@@ -2,7 +2,7 @@ use std::fmt::Write;
 
 use unicode_width::UnicodeWidthStr;
 
-use crate::dangos::{Dango, Run, sort_dangos};
+use crate::dangos::{Dango, DangoKind, Run, sort_dangos};
 
 pub const TRACK_LEN: usize = 32;
 
@@ -67,10 +67,12 @@ pub fn show_track(round: usize, dangos: &[Dango], track: &Track, map: &Map) {
 
     static DANGO_SEP: &str = " -> ";
     for dango in dangos.iter() {
+        use crate::dangos::DangoKind;
+
         write!(
             &mut track_state,
             "{}({}){}",
-            dango.shortname(),
+            DangoKind::from(dango).shortname(),
             dango.get_n(),
             DANGO_SEP
         )
@@ -88,7 +90,7 @@ pub fn show_track(round: usize, dangos: &[Dango], track: &Track, map: &Map) {
                 write!(
                     &mut cell,
                     "{}({}) ",
-                    dango.shortname(),
+                    DangoKind::from(dango).shortname(),
                     dango.get_arrive_count()
                 )
                 .expect("Write failed");

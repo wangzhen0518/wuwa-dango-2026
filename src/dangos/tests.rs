@@ -78,9 +78,9 @@ fn test_budawang_extra_is_always_zero() {
 
 #[test]
 fn test_shortname_fullname() {
-    assert_eq!(Dango::default_denia().shortname(), "达");
-    assert_eq!(Dango::default_sigrika().fullname(), "西格莉卡");
-    assert_eq!(Dango::default_budawang().fullname(), "布大王");
+    assert_eq!(DangoKind::Denia.shortname(), "达");
+    assert_eq!(DangoKind::Sigrika.fullname(), "西格莉卡");
+    assert_eq!(DangoKind::BuDaWang.fullname(), "布大王");
 }
 
 // ────────── pos 与 arrive_count ──────────

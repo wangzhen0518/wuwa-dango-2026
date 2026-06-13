@@ -229,31 +229,6 @@ pub enum Dango {
 }
 
 impl Dango {
-    #[allow(dead_code)]
-    pub fn fullname(&self) -> &'static str {
-        match self {
-            Dango::BuDaWang(_) => "布大王",
-            Dango::Cartethyia(_) => "卡提希娅",
-            Dango::Denia(_) => "达妮娅",
-            Dango::Hiyuki(_) => "绯雪",
-            Dango::LuukHerssen(_) => "陆·赫斯",
-            Dango::Phoebe(_) => "菲比",
-            Dango::Sigrika(_) => "西格莉卡",
-        }
-    }
-
-    pub fn shortname(&self) -> &'static str {
-        match self {
-            Dango::BuDaWang(_) => "布",
-            Dango::Cartethyia(_) => "卡",
-            Dango::Denia(_) => "达",
-            Dango::Hiyuki(_) => "绯",
-            Dango::LuukHerssen(_) => "陆",
-            Dango::Phoebe(_) => "菲",
-            Dango::Sigrika(_) => "西",
-        }
-    }
-
     pub fn default_budawang() -> Dango {
         Dango::BuDaWang(budawang::default_budawang())
     }
@@ -546,7 +521,7 @@ pub fn show_dangos(dangos: &[Dango]) {
         write!(
             &mut rank_info,
             "{}({}, {})({}), ",
-            dango.shortname(),
+            DangoKind::from(dango).shortname(),
             x,
             y,
             dango.get_arrive_count()
@@ -554,6 +529,58 @@ pub fn show_dangos(dangos: &[Dango]) {
         .expect("Write failed");
     }
     println!("{}", rank_info);
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DangoKind {
+    BuDaWang,
+    Cartethyia,
+    Denia,
+    Hiyuki,
+    LuukHerssen,
+    Phoebe,
+    Sigrika,
+}
+
+impl DangoKind {
+    #[allow(dead_code)]
+    pub fn fullname(self) -> &'static str {
+        match self {
+            DangoKind::BuDaWang => "布大王",
+            DangoKind::Cartethyia => "卡提希娅",
+            DangoKind::Denia => "达妮娅",
+            DangoKind::Hiyuki => "绯雪",
+            DangoKind::LuukHerssen => "陆·赫斯",
+            DangoKind::Phoebe => "菲比",
+            DangoKind::Sigrika => "西格莉卡",
+        }
+    }
+
+    pub fn shortname(self) -> &'static str {
+        match self {
+            DangoKind::BuDaWang => "布",
+            DangoKind::Cartethyia => "卡",
+            DangoKind::Denia => "达",
+            DangoKind::Hiyuki => "绯",
+            DangoKind::LuukHerssen => "陆",
+            DangoKind::Phoebe => "菲",
+            DangoKind::Sigrika => "西",
+        }
+    }
+}
+
+impl From<&Dango> for DangoKind {
+    fn from(value: &Dango) -> Self {
+        match value {
+            Dango::BuDaWang(_) => DangoKind::BuDaWang,
+            Dango::Cartethyia(_) => DangoKind::Cartethyia,
+            Dango::Denia(_) => DangoKind::Denia,
+            Dango::Hiyuki(_) => DangoKind::Hiyuki,
+            Dango::LuukHerssen(_) => DangoKind::LuukHerssen,
+            Dango::Phoebe(_) => DangoKind::Phoebe,
+            Dango::Sigrika(_) => DangoKind::Sigrika,
+        }
+    }
 }
 
 #[cfg(test)]
