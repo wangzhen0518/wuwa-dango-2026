@@ -21,6 +21,7 @@ pub fn debug_print(msg: &str) {
 }
 
 #[cfg(not(debug_assertions))]
+#[allow(unused_variables)]
 pub fn debug_print(msg: &str) {}
 
 #[cfg(debug_assertions)]

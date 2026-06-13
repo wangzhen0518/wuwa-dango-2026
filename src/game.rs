@@ -1,7 +1,10 @@
+use std::{collections::HashMap, hash::Hash};
+
 use rand::seq::SliceRandom;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
-    dangos::{Dango, Run, is_budawang},
+    dangos::{Dango, DangoKind, Run, is_budawang, sort_dangos},
     track::{Map, TRACK_LEN, Track, init_map, init_track, show_track},
     utils::{MyRng, gen_rng},
 };
@@ -175,6 +178,45 @@ pub fn one_game(first_half_finish_state: Option<GameState>, init_rng: Option<MyR
         budawang,
         round,
     )
+}
+
+pub type GameResults = Vec<Vec<DangoKind>>;
+pub type RankStatistics = Vec<(Vec<DangoKind>, i64)>;
+pub type DangoStatistics = Vec<(DangoKind, i64)>;
+
+/// 大量重复比赛
+pub fn simulate_game(n: usize) -> GameResults {
+    (0..n)
+        .into_par_iter()
+        .map(|_i| {
+            let mut state = one_game(None, None);
+            sort_dangos(&mut state.dangos);
+            state.dangos.iter().map(DangoKind::from).collect()
+        })
+        .collect()
+}
+
+/// 统计比赛结果
+pub fn statistic_game_result(result: &GameResults) -> (RankStatistics, DangoStatistics) {
+    fn insert_dict<Key: Eq + Hash>(key: Key, dict: &mut HashMap<Key, i64>) {
+        dict.entry(key).and_modify(|cnt| *cnt += 1).or_insert(1);
+    }
+    fn extract_dict<Key>(dict: HashMap<Key, i64>) -> Vec<(Key, i64)> {
+        let mut v: Vec<_> = dict.into_iter().collect();
+        v.sort_by_key(|(_, cnt)| -cnt);
+        v
+    }
+
+    let mut rank_stat = HashMap::new();
+    let mut dango_stat = HashMap::new();
+    for rank in result {
+        insert_dict(rank.clone(), &mut rank_stat);
+        insert_dict(rank[0], &mut dango_stat);
+    }
+    let rank_stat = extract_dict(rank_stat);
+    let dango_stat = extract_dict(dango_stat);
+
+    (rank_stat, dango_stat)
 }
 
 #[cfg(test)]

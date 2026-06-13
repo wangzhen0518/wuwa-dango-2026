@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use std::fmt::Write;
 
 use unicode_width::UnicodeWidthStr;
@@ -15,6 +17,7 @@ pub enum PointType {
 }
 
 impl PointType {
+    #[allow(dead_code)]
     pub fn shortname(&self) -> &'static str {
         match self {
             PointType::Accelerate => "A",
@@ -109,6 +112,7 @@ pub fn show_track(round: usize, dangos: &[Dango], track: &Track, map: &Map) {
 }
 
 #[cfg(not(debug_assertions))]
+#[allow(unused_variables)]
 pub fn show_track(round: usize, dangos: &[Dango], track: &Track, map: &Map) {}
 
 #[allow(dead_code)]
