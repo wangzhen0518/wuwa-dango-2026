@@ -178,7 +178,6 @@ cargo test -- --nocapture
 - [ ] 比赛过程记录到文件
 - [ ] TUI 比赛回放可视化
 - [ ] 团子各排名的概率分布计算
-- [ ] 根据黑马值计算应援期望收益
 
 详见 [TODO.md](TODO.md) 和 [agent/](agent/)。
 

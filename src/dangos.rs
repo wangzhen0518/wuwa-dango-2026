@@ -488,7 +488,9 @@ impl Run for Dango {
 
 impl PartialEq for Dango {
     fn eq(&self, other: &Self) -> bool {
-        self.get_arrive_count() == other.get_arrive_count() && self.get_pos() == other.get_pos()
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+            && self.get_arrive_count() == other.get_arrive_count()
+            && self.get_pos() == other.get_pos()
     }
 }
 
