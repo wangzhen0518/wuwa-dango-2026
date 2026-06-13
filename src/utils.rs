@@ -67,8 +67,8 @@ impl From<ThreadRng> for MyRng {
 
 pub fn gen_rng() -> MyRng {
     let args: Vec<_> = std::env::args().collect();
-    if args.len() > 1 {
-        let seed: u64 = args[1].parse().unwrap();
+    if args.len() > 1 && args[1] == "--seed" {
+        let seed: u64 = args[2].parse().unwrap();
         mydbg!(seed);
         StdRng::seed_from_u64(seed).into()
     } else {

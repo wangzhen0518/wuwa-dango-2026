@@ -40,7 +40,7 @@ fn demo_game() {
 }
 
 fn demo_statistics() {
-    let n = 10000;
+    let n = 1_000_000;
 
     let game_results = simulate_game(n);
     let (rank_stat, dango_stat) = statistic_game_result(&game_results);
