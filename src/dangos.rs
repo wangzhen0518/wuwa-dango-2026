@@ -16,6 +16,7 @@ pub mod chisa;
 pub mod denia;
 pub mod hiyuki;
 pub mod luukherssen;
+pub mod lynae;
 pub mod mornye;
 pub mod phoebe;
 pub mod sigrika;
@@ -26,6 +27,7 @@ use chisa::Chisa;
 use denia::Denia;
 use hiyuki::Hiyuki;
 use luukherssen::LuukHerssen;
+use lynae::Lynae;
 use mornye::Mornye;
 use phoebe::Phoebe;
 use sigrika::Sigrika;
@@ -100,9 +102,7 @@ pub trait Run {
 
         // 越过终点
         if target_x >= track.len() {
-            self.increase_arrive_count();
-            tail[1..] //TODO 为什么从 1 开始索引？
-                .iter_mut()
+            tail.iter_mut()
                 .for_each(|dango| dango.increase_arrive_count());
             target_x %= track.len();
         }
@@ -118,10 +118,9 @@ pub trait Run {
                 let acc = self.accelerate_step();
                 let mut new_x = target_x + acc;
                 if new_x >= track.len() {
-                    self.increase_arrive_count();
                     let (left, _) = track.split_at_mut(target_x + 1);
-                    // target_x 处的 tail 部分（从 target_y + 1 开始）在 append 后位于 left[target_x][target_y + 1..]
-                    left[target_x][target_y + 1..]
+                    // target_x 处的 tail 部分，在 append 后位于 left[target_x][target_y..]
+                    left[target_x][target_y..]
                         .iter_mut()
                         .for_each(|dango| dango.increase_arrive_count());
                     new_x %= track.len();
@@ -231,6 +230,7 @@ pub enum Dango {
     Denia(Rc<RefCell<Denia>>),
     Hiyuki(Rc<RefCell<Hiyuki>>),
     LuukHerssen(Rc<RefCell<LuukHerssen>>),
+    Lynae(Rc<RefCell<Lynae>>),
     Mornye(Rc<RefCell<Mornye>>),
     Phoebe(Rc<RefCell<Phoebe>>),
     Sigrika(Rc<RefCell<Sigrika>>),
@@ -260,6 +260,11 @@ impl Dango {
 
     pub fn default_luukherssen() -> Dango {
         Dango::LuukHerssen(luukherssen::default_luukherssen())
+    }
+
+    #[allow(dead_code)]
+    pub fn default_lynae() -> Dango {
+        Dango::Lynae(lynae::default_lynae())
     }
 
     #[allow(dead_code)]
@@ -351,6 +356,23 @@ impl Dango {
             arrive_count,
             target_arrive_count,
             meeted,
+        ))
+    }
+
+    #[allow(dead_code)]
+    pub fn new_lynae(
+        n: usize,
+        pos: (usize, usize),
+        extra: isize,
+        arrive_count: usize,
+        target_arrive_count: usize,
+    ) -> Dango {
+        Dango::Lynae(lynae::new_lynae(
+            n,
+            pos,
+            extra,
+            arrive_count,
+            target_arrive_count,
         ))
     }
 
@@ -477,6 +499,7 @@ macro_rules! impl_run_for_dango_helper {
                     Dango::Denia(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Hiyuki(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::LuukHerssen(ref_cell) => ref_cell.$name($($arg),*),
+                    Dango::Lynae(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Mornye(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Phoebe(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Sigrika(ref_cell) => ref_cell.$name($($arg),*),
@@ -610,6 +633,7 @@ pub enum DangoKind {
     Denia,
     Hiyuki,
     LuukHerssen,
+    Lynae,
     Mornye,
     Phoebe,
     Sigrika,
@@ -625,6 +649,7 @@ impl DangoKind {
             DangoKind::Denia => "达妮娅",
             DangoKind::Hiyuki => "绯雪",
             DangoKind::LuukHerssen => "陆·赫斯",
+            DangoKind::Lynae => "琳奈",
             DangoKind::Mornye => "莫宁",
             DangoKind::Phoebe => "菲比",
             DangoKind::Sigrika => "西格莉卡",
@@ -639,6 +664,7 @@ impl DangoKind {
             DangoKind::Denia => "达",
             DangoKind::Hiyuki => "绯",
             DangoKind::LuukHerssen => "陆",
+            DangoKind::Lynae => "琳",
             DangoKind::Mornye => "莫",
             DangoKind::Phoebe => "菲",
             DangoKind::Sigrika => "西",
@@ -655,6 +681,7 @@ impl From<&Dango> for DangoKind {
             Dango::Denia(_) => DangoKind::Denia,
             Dango::Hiyuki(_) => DangoKind::Hiyuki,
             Dango::LuukHerssen(_) => DangoKind::LuukHerssen,
+            Dango::Lynae(_) => DangoKind::Lynae,
             Dango::Mornye(_) => DangoKind::Mornye,
             Dango::Phoebe(_) => DangoKind::Phoebe,
             Dango::Sigrika(_) => DangoKind::Sigrika,
