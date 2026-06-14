@@ -23,11 +23,11 @@ impl Default for Denia {
     fn default() -> Self {
         Self {
             n: 0,
-            last_dice: 0,
             pos: (0, 0),
             extra: 0,
             arrive_count: 0,
             target_arrive_count: 1,
+            last_dice: 0,
         }
     }
 }
@@ -83,7 +83,7 @@ pub fn default_denia() -> Rc<RefCell<Denia>> {
 
 #[cfg(test)]
 mod tests {
-    use rand::rngs::StdRng;
+    use rand::{SeedableRng, rngs::StdRng};
 
     use crate::dangos::tests::*;
 
@@ -91,8 +91,6 @@ mod tests {
 
     #[test]
     fn test_denia_consecutive_dice_bonus() {
-        use rand::SeedableRng;
-
         let mut rng = StdRng::seed_from_u64(0);
 
         let map = dummy_map();

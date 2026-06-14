@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 #[allow(unused_imports)]
 use std::{cell::RefCell, fmt::Write, rc::Rc};
 
@@ -7,10 +8,14 @@ use rand::{
     seq::{IndexedRandom, SliceRandom},
 };
 
-use crate::track::{Map, Point, PointType, Track};
+use crate::{
+    dangos::chisa::Chisa,
+    track::{Map, Point, PointType, Track},
+};
 
 pub mod budawang;
 pub mod cartethyia;
+pub mod chisa;
 pub mod denia;
 pub mod hiyuki;
 pub mod luukherssen;
@@ -222,6 +227,7 @@ pub(in crate::dangos) use impl_run_helper;
 pub enum Dango {
     BuDaWang(Rc<RefCell<BuDaWang>>),
     Cartethyia(Rc<RefCell<Cartethyia>>),
+    Chisa(Rc<RefCell<Chisa>>),
     Denia(Rc<RefCell<Denia>>),
     Hiyuki(Rc<RefCell<Hiyuki>>),
     LuukHerssen(Rc<RefCell<LuukHerssen>>),
@@ -236,6 +242,11 @@ impl Dango {
 
     pub fn default_cartethyia() -> Dango {
         Dango::Cartethyia(cartethyia::default_cartethyia())
+    }
+
+    #[allow(dead_code)]
+    pub fn default_chisa() -> Dango {
+        Dango::Chisa(chisa::default_chisa())
     }
 
     pub fn default_denia() -> Dango {
@@ -279,6 +290,23 @@ impl Dango {
             arrive_count,
             target_arrive_count,
             has_been_last,
+        ))
+    }
+
+    #[allow(dead_code)]
+    pub fn new_chisa(
+        n: usize,
+        pos: (usize, usize),
+        extra: isize,
+        arrive_count: usize,
+        target_arrive_count: usize,
+    ) -> Dango {
+        Dango::Chisa(chisa::new_chisa(
+            n,
+            pos,
+            extra,
+            arrive_count,
+            target_arrive_count,
         ))
     }
 
@@ -387,6 +415,7 @@ macro_rules! from_variant_helper {
 from_variant_helper!(
     BuDaWang,
     Cartethyia,
+    Chisa,
     Denia,
     Hiyuki,
     LuukHerssen,
@@ -419,6 +448,7 @@ macro_rules! impl_run_for_dango_helper {
                 match self {
                     Dango::BuDaWang(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Cartethyia(ref_cell) => ref_cell.$name($($arg),*),
+                    Dango::Chisa(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Denia(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Hiyuki(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::LuukHerssen(ref_cell) => ref_cell.$name($($arg),*),
@@ -510,8 +540,12 @@ fn has_budawang(range: &[Point]) -> bool {
 //     })
 // }
 
+// pub fn sort_dangos(dangos: &mut [Dango]) {
+//     dangos.sort_unstable_by(|a, b| b.cmp(a));
+// }
+
 pub fn sort_dangos(dangos: &mut [Dango]) {
-    dangos.sort_unstable_by(|a, b| b.cmp(a));
+    dangos.sort_by_cached_key(|dango| Reverse((dango.get_arrive_count(), dango.get_pos())));
 }
 
 #[cfg(debug_assertions)]
@@ -541,6 +575,7 @@ pub fn show_dangos(dangos: &[Dango]) {}
 pub enum DangoKind {
     BuDaWang,
     Cartethyia,
+    Chisa,
     Denia,
     Hiyuki,
     LuukHerssen,
@@ -554,6 +589,7 @@ impl DangoKind {
         match self {
             DangoKind::BuDaWang => "布大王",
             DangoKind::Cartethyia => "卡提希娅",
+            DangoKind::Chisa => "千咲",
             DangoKind::Denia => "达妮娅",
             DangoKind::Hiyuki => "绯雪",
             DangoKind::LuukHerssen => "陆·赫斯",
@@ -566,6 +602,7 @@ impl DangoKind {
         match self {
             DangoKind::BuDaWang => "布",
             DangoKind::Cartethyia => "卡",
+            DangoKind::Chisa => "千",
             DangoKind::Denia => "达",
             DangoKind::Hiyuki => "绯",
             DangoKind::LuukHerssen => "陆",
@@ -580,6 +617,7 @@ impl From<&Dango> for DangoKind {
         match value {
             Dango::BuDaWang(_) => DangoKind::BuDaWang,
             Dango::Cartethyia(_) => DangoKind::Cartethyia,
+            Dango::Chisa(_) => DangoKind::Chisa,
             Dango::Denia(_) => DangoKind::Denia,
             Dango::Hiyuki(_) => DangoKind::Hiyuki,
             Dango::LuukHerssen(_) => DangoKind::LuukHerssen,
