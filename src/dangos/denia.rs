@@ -37,9 +37,9 @@ impl Run for RefCell<Denia> {
 
     fn reset(&self) {
         let mut self_mut_inner = self.borrow_mut();
-        self_mut_inner.last_dice = 0;
         self_mut_inner.extra = 0;
         self_mut_inner.n = 0;
+        self_mut_inner.last_dice = 0;
     }
 
     fn step<R>(&self, _dangos: &[Dango], track: &mut Track, map: &Map, rng: &mut R) -> bool

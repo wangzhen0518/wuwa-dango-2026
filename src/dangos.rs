@@ -8,10 +8,7 @@ use rand::{
     seq::{IndexedRandom, SliceRandom},
 };
 
-use crate::{
-    dangos::chisa::Chisa,
-    track::{Map, Point, PointType, Track},
-};
+use crate::track::{Map, Point, PointType, Track};
 
 pub mod budawang;
 pub mod cartethyia;
@@ -19,14 +16,17 @@ pub mod chisa;
 pub mod denia;
 pub mod hiyuki;
 pub mod luukherssen;
+pub mod mornye;
 pub mod phoebe;
 pub mod sigrika;
 
 use budawang::BuDaWang;
 use cartethyia::Cartethyia;
+use chisa::Chisa;
 use denia::Denia;
 use hiyuki::Hiyuki;
 use luukherssen::LuukHerssen;
+use mornye::Mornye;
 use phoebe::Phoebe;
 use sigrika::Sigrika;
 
@@ -231,6 +231,7 @@ pub enum Dango {
     Denia(Rc<RefCell<Denia>>),
     Hiyuki(Rc<RefCell<Hiyuki>>),
     LuukHerssen(Rc<RefCell<LuukHerssen>>),
+    Mornye(Rc<RefCell<Mornye>>),
     Phoebe(Rc<RefCell<Phoebe>>),
     Sigrika(Rc<RefCell<Sigrika>>),
 }
@@ -259,6 +260,11 @@ impl Dango {
 
     pub fn default_luukherssen() -> Dango {
         Dango::LuukHerssen(luukherssen::default_luukherssen())
+    }
+
+    #[allow(dead_code)]
+    pub fn default_mornye() -> Dango {
+        Dango::Mornye(mornye::default_mornye())
     }
 
     pub fn default_phoebe() -> Dango {
@@ -366,6 +372,25 @@ impl Dango {
     }
 
     #[allow(dead_code)]
+    pub fn new_mornye(
+        n: usize,
+        pos: (usize, usize),
+        extra: isize,
+        arrive_count: usize,
+        target_arrive_count: usize,
+        next_dice_index: usize,
+    ) -> Dango {
+        Dango::Mornye(mornye::new_mornye(
+            n,
+            pos,
+            extra,
+            arrive_count,
+            target_arrive_count,
+            next_dice_index,
+        ))
+    }
+
+    #[allow(dead_code)]
     pub fn new_phoebe(
         n: usize,
         pos: (usize, usize),
@@ -452,6 +477,7 @@ macro_rules! impl_run_for_dango_helper {
                     Dango::Denia(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Hiyuki(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::LuukHerssen(ref_cell) => ref_cell.$name($($arg),*),
+                    Dango::Mornye(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Phoebe(ref_cell) => ref_cell.$name($($arg),*),
                     Dango::Sigrika(ref_cell) => ref_cell.$name($($arg),*),
                 }
@@ -579,6 +605,7 @@ pub enum DangoKind {
     Denia,
     Hiyuki,
     LuukHerssen,
+    Mornye,
     Phoebe,
     Sigrika,
 }
@@ -593,6 +620,7 @@ impl DangoKind {
             DangoKind::Denia => "达妮娅",
             DangoKind::Hiyuki => "绯雪",
             DangoKind::LuukHerssen => "陆·赫斯",
+            DangoKind::Mornye => "莫宁",
             DangoKind::Phoebe => "菲比",
             DangoKind::Sigrika => "西格莉卡",
         }
@@ -606,6 +634,7 @@ impl DangoKind {
             DangoKind::Denia => "达",
             DangoKind::Hiyuki => "绯",
             DangoKind::LuukHerssen => "陆",
+            DangoKind::Mornye => "莫",
             DangoKind::Phoebe => "菲",
             DangoKind::Sigrika => "西",
         }
@@ -621,6 +650,7 @@ impl From<&Dango> for DangoKind {
             Dango::Denia(_) => DangoKind::Denia,
             Dango::Hiyuki(_) => DangoKind::Hiyuki,
             Dango::LuukHerssen(_) => DangoKind::LuukHerssen,
+            Dango::Mornye(_) => DangoKind::Mornye,
             Dango::Phoebe(_) => DangoKind::Phoebe,
             Dango::Sigrika(_) => DangoKind::Sigrika,
         }
