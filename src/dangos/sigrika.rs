@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    dangos::{Dango, Run, impl_run_helper, sort_dangos},
+    dangos::{Dango, Run, cmp_dango, impl_run_helper},
     track::Track,
 };
 
@@ -32,24 +32,22 @@ impl Run for RefCell<Sigrika> {
     impl_run_helper!();
 
     fn before_run(&self, dangos: &[Dango], _track: &mut Track) {
-        let self_inner = self.borrow();
+        // let self_inner = self.borrow();
         // 收集除布大王外，领先于自己的团子
         let mut ahead_dangos: Vec<_> = dangos
             .iter()
             .filter(|dango| {
                 !matches!(dango, Dango::BuDaWang(_) | Dango::Sigrika(_))
-                    && dango
-                        .get_arrive_count()
-                        .cmp(&self_inner.arrive_count)
-                        .then(dango.get_pos().cmp(&self_inner.pos))
-                        .is_gt()
+                    && cmp_dango(*dango, self).is_gt()
             })
             .cloned()
             .collect();
 
         if !ahead_dangos.is_empty() {
-            sort_dangos(&mut ahead_dangos);
-            ahead_dangos.iter_mut().rev().take(2).for_each(|dango| {
+            if ahead_dangos.len() > 2 {
+                ahead_dangos.select_nth_unstable(2);
+            }
+            ahead_dangos.iter_mut().take(2).for_each(|dango| {
                 let target_extra = dango.get_extra() - 1;
                 dango.set_extra(target_extra);
             });

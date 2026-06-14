@@ -536,10 +536,15 @@ impl PartialOrd for Dango {
 
 impl Ord for Dango {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.get_arrive_count()
-            .cmp(&other.get_arrive_count())
-            .then(self.get_pos().cmp(&other.get_pos()))
+        cmp_dango(self, other)
     }
+}
+
+#[inline]
+pub fn cmp_dango<U: Run, V: Run>(d1: &U, d2: &V) -> std::cmp::Ordering {
+    d1.get_arrive_count()
+        .cmp(&d2.get_arrive_count())
+        .then(d1.get_pos().cmp(&d2.get_pos()))
 }
 
 pub fn is_budawang(dango: &Dango) -> bool {
