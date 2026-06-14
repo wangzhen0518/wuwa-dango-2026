@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use std::{cell::RefCell, fmt::Write, rc::Rc};
 
 // use ambassador::delegatable_trait;
@@ -510,9 +511,10 @@ fn has_budawang(range: &[Point]) -> bool {
 // }
 
 pub fn sort_dangos(dangos: &mut [Dango]) {
-    dangos.sort_by(|a, b| b.cmp(a));
+    dangos.sort_unstable_by(|a, b| b.cmp(a));
 }
 
+#[cfg(debug_assertions)]
 #[allow(unused)]
 pub fn show_dangos(dangos: &[Dango]) {
     let mut rank_info = String::with_capacity(10 * dangos.len());
@@ -530,6 +532,10 @@ pub fn show_dangos(dangos: &[Dango]) {
     }
     println!("{}", rank_info);
 }
+
+#[cfg(not(debug_assertions))]
+#[allow(unused)]
+pub fn show_dangos(dangos: &[Dango]) {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DangoKind {

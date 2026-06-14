@@ -17,5 +17,6 @@ criterion = { version = "0.8.2", features = ["stable"] }
 name = "game_bench"
 harness = false
 
-[profile.release]
+[profile.profiling]
+inherits = "release"
 debug = true

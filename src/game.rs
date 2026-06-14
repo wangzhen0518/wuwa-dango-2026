@@ -9,6 +9,7 @@ use crate::{
     utils::{MyRng, gen_rng},
 };
 
+#[derive(Debug)]
 pub struct GameState {
     // rng: ThreadRng,
     pub rng: MyRng,
@@ -203,7 +204,7 @@ pub fn statistic_game_result(result: &GameResults) -> (RankStatistics, DangoStat
     }
     fn extract_dict<Key>(dict: HashMap<Key, i64>) -> Vec<(Key, i64)> {
         let mut v: Vec<_> = dict.into_iter().collect();
-        v.sort_by_key(|(_, cnt)| -cnt);
+        v.sort_unstable_by_key(|(_, cnt)| -cnt);
         v
     }
 

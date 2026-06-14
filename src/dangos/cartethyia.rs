@@ -35,7 +35,6 @@ impl Cartethyia {
                         .then(dango.get_pos().cmp(&self.pos))
                         .is_lt()
             })
-            .cloned()
             .collect();
 
         after_self_dangos.is_empty()

@@ -1,4 +1,5 @@
 logs/
+perf/
 target/
 
 *.code-workspace

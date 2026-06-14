@@ -46,7 +46,7 @@ trait TryRng {
     fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error>;
 }
 
-#[derive(Delegate)]
+#[derive(Debug, Delegate)]
 #[delegate(TryRng)]
 pub enum MyRng {
     StdRng(Box<StdRng>),

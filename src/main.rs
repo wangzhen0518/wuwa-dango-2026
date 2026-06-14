@@ -39,6 +39,7 @@ fn demo_game() {
     show_dangos(&finish_state.dangos);
 }
 
+#[allow(dead_code)]
 fn demo_statistics() {
     let n = 1_000_000;
 
