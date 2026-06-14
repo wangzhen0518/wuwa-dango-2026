@@ -6,7 +6,7 @@ use rand::{
 };
 
 use crate::{
-    dangos::{Dango, Run, sort_dangos},
+    dangos::{Dango, Run},
     track::{Map, PointType, TRACK_LEN, Track},
     utils::split_first,
 };
@@ -23,17 +23,14 @@ impl BuDaWang {
     fn leave_last_dango(&self, dangos: &[Dango]) -> bool {
         let (x, _) = self.pos;
 
-        // 收集除布大王以外的团子
-        let mut other_dangos: Vec<_> = dangos
+        // 除布大王以外的最后一名团子
+        let last_dango = dangos
             .iter()
             .filter(|dango| !matches!(dango, Dango::BuDaWang(_)))
-            .cloned()
-            .collect();
+            .min()
+            .expect("Always has dangos");
 
-        sort_dangos(&mut other_dangos);
-
-        let last_dango = other_dangos.last().expect("Always can get dango");
-        let (last_x, _last_y) = last_dango.get_pos();
+        let (last_x, _) = last_dango.get_pos();
 
         last_x > x
     }
