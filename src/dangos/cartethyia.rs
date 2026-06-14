@@ -24,20 +24,17 @@ pub struct Cartethyia {
 
 impl Cartethyia {
     fn is_last(&self, dangos: &[Dango]) -> bool {
-        // 收集除自己和布大王以外、落后于自己的团子
-        let after_self_dangos: Vec<_> = dangos
+        // 所有团子都领先自己（除布大王）
+        dangos
             .iter()
-            .filter(|dango| {
-                !matches!(dango, Dango::BuDaWang(_) | Dango::Cartethyia(_))
-                    && dango
-                        .get_arrive_count()
-                        .cmp(&self.arrive_count)
-                        .then(dango.get_pos().cmp(&self.pos))
-                        .is_lt()
+            .filter(|dango| !matches!(dango, Dango::BuDaWang(_) | Dango::Cartethyia(_)))
+            .all(|dango| {
+                dango
+                    .get_arrive_count()
+                    .cmp(&self.arrive_count)
+                    .then(dango.get_pos().cmp(&self.pos))
+                    .is_gt()
             })
-            .collect();
-
-        after_self_dangos.is_empty()
     }
 }
 
