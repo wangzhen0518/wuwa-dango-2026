@@ -1,10 +1,10 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{cmp::Reverse, collections::HashMap, hash::Hash};
 
 use rand::seq::SliceRandom;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 use crate::{
-    dangos::{Dango, DangoKind, Run, is_budawang, sort_dangos},
+    dangos::{Dango, DangoKind, Run, is_budawang},
     track::{Map, TRACK_LEN, Track, init_map, init_track, show_track},
     utils::{MyRng, gen_rng},
 };
@@ -190,9 +190,20 @@ pub fn simulate_game(n: usize) -> GameResults {
     (0..n)
         .into_par_iter()
         .map(|_i| {
-            let mut state = one_game(None, None);
-            sort_dangos(&mut state.dangos);
-            state.dangos.iter().map(DangoKind::from).collect()
+            let state = one_game(None, None);
+            let mut keys: Vec<_> = state
+                .dangos
+                .iter()
+                .map(|dango| {
+                    (
+                        dango.get_arrive_count(),
+                        dango.get_pos(),
+                        DangoKind::from(dango),
+                    )
+                })
+                .collect();
+            keys.sort_unstable_by_key(|(arrive_count, pos, _)| Reverse((*arrive_count, *pos)));
+            keys.into_iter().map(|(_, _, kind)| kind).collect()
         })
         .collect()
 }
